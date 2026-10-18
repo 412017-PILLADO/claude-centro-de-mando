@@ -297,6 +297,7 @@ let altoMaximo = null // null = lo que entre en la pantalla
 let altoNatural = ALTO_MINIMO
 let inicioRedimension = null
 let pisoDelPanel = null // borde de abajo del panel (y de pantalla): crece hacia arriba desde ahí
+let ladoDelPanel = 'izquierda' // de qué lado del gatito se abrió (el gato mira hacia ahí)
 
 function cargarTamano() {
   const { width, altoMax } = guardada()
@@ -333,7 +334,11 @@ function abrirCentro(gatoX) {
   const separacion = 56 // medio gatito y un poco de aire
   pisoDelPanel = area.y + area.height - 8
   let x = centro - separacion - ancho // a la izquierda del gato…
-  if (x < area.x + 8) x = centro + separacion // …o a la derecha si no entra
+  ladoDelPanel = 'izquierda'
+  if (x < area.x + 8) {
+    x = centro + separacion // …o a la derecha si no entra
+    ladoDelPanel = 'derecha'
+  }
   x = Math.max(area.x + 8, Math.min(area.x + area.width - ancho - 8, x))
   ventana.setBounds({ x: Math.round(x), y: pisoDelPanel - ALTO_MINIMO, width: Math.round(ancho), height: ALTO_MINIMO })
   ajustarTamano()
@@ -365,8 +370,8 @@ function crearVentana() {
   ventana.setAlwaysOnTop(true, 'floating')
   ventana.loadFile(path.join(__dirname, 'ui', 'index.html'))
   // El gatito se entera si el centro está abierto (se queda sentado al lado).
-  ventana.on('show', () => mascota?.webContents.send('centro-visible', true))
-  ventana.on('hide', () => mascota?.webContents.send('centro-visible', false))
+  ventana.on('show', () => mascota?.webContents.send('centro-visible', { visible: true, lado: ladoDelPanel }))
+  ventana.on('hide', () => mascota?.webContents.send('centro-visible', { visible: false, lado: ladoDelPanel }))
   ventana.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
   ventana.webContents.on('will-navigate', evento => evento.preventDefault())
 }

@@ -11,7 +11,8 @@ const api = window.centro
 
 const $ = id => document.getElementById(id)
 const ALTO_GATO = 84
-const ANCHO_GATO = Math.round((ALTO_GATO * 234) / 237)
+// Todos los dibujos comparten el lienzo de sprites/medidas.json (288 × 237).
+const ANCHO_GATO = Math.round((ALTO_GATO * 288) / 237)
 const MARGEN = 150 // para que los globos no se salgan de la pantalla
 const AVISO_REUNION_MS = 5 * 60_000
 const RECIENTE_MS = 10 * 60_000
@@ -22,8 +23,20 @@ const DORMILON_MS = 30 * 60_000
 const DIBUJOS = [
   'sentado', 'contento', 'atento', 'cola', 'caminar1', 'caminar2', 'caminar3', 'caminar4',
   'alerta', 'tablet', 'listo', 'duda', 'sueno', 'durmiendo', 'bolita', 'estirarse',
+  'maullar1', 'maullar2', 'saludar1', 'saludar2', 'correr1', 'correr2', 'correr3', 'correr4',
+  'lamer1', 'lamer2', 'lamer3', 'bostezo1', 'bostezo2', 'bostezo3', 'salto1', 'salto2', 'salto3',
+  'espaldas1', 'espaldas2',
 ]
 const PASOS = ['caminar1', 'caminar2', 'caminar3', 'caminar4']
+const ZANCADAS = ['correr1', 'correr2', 'correr3', 'correr4']
+
+// Secuencias: [dibujo, milisegundos] en orden.
+const HABLAR = [['maullar2', 220], ['maullar1', 160], ['maullar2', 220], ['maullar1', 160], ['maullar2', 220], ['maullar1', 300]]
+const SALUDAR = [['saludar1', 380], ['saludar2', 380], ['saludar1', 380], ['saludar2', 380], ['saludar1', 380], ['saludar2', 380]]
+const LAMERSE = [['lamer1', 360], ['lamer2', 360], ['lamer1', 360], ['lamer2', 360], ['lamer1', 360], ['lamer2', 360], ['lamer3', 900]]
+const SALTO = [['salto1', 160], ['salto2', 420], ['salto3', 220]]
+const BOSTEZO = [['bostezo1', 300], ['bostezo2', 950], ['bostezo3', 650], ['sueno', 1400]]
+const duracion = secuencia => secuencia.reduce((total, [, ms]) => total + ms, 0)
 
 const imagenes = {}
 for (const nombre of DIBUJOS) {
@@ -56,6 +69,7 @@ const MAX_GLOBOS = 4
 function mostrarAlerta(id, { icono = '', negrita = '', texto = '', boton = null, fija = false, ms = 6000, tono = '' }) {
   if (descartadas.has(id)) return
   const existente = alertas.get(id)
+  if (!existente) hablar() // un globo nuevo: el gatito lo "dice"
   const alerta = { icono, negrita, texto, boton, fija, tono, hasta: fija ? Infinity : performance.now() + ms, nodo: existente && existente.nodo }
   alertas.set(id, alerta)
   dibujarAlerta(id, alerta)
@@ -218,8 +232,10 @@ api.alRecibirDecir(({ texto, ms }) => {
 let ancho = innerWidth
 let x = innerWidth - MARGEN - ANCHO_GATO - 160
 let direccion = -1
-// accion: { tipo: 'caminar' | 'sentado' | 'dormir' | 'saltar', hasta, objetivo, velocidad, dibujo, desde }
+// accion: { tipo: 'caminar' | 'sentado' | 'dormir' | 'saltar' | 'secuencia', hasta, objetivo, velocidad,
+//           dibujo, desde, cuadros, luego }
 let accion = null
+let ladoDelCentro = 'izquierda'
 let arrastre = null
 let ultimoCuadro = 0
 let paso = 0
@@ -228,28 +244,53 @@ const azar = (min, max) => min + Math.random() * (max - min)
 const alguno = lista => lista[Math.floor(Math.random() * lista.length)]
 const limite = valor => Math.max(MARGEN, Math.min(ancho - MARGEN - ANCHO_GATO, valor))
 
+// Una secuencia de dibujos; al terminar sigue con "luego" (o elige otra cosa).
+function secuencia(cuadros, luego = null) {
+  return { tipo: 'secuencia', cuadros, desde: performance.now(), hasta: performance.now() + duracion(cuadros), luego }
+}
+
 function elegirAccion(ahora, anterior) {
-  // Con el centro abierto se queda sentado al lado, atento.
-  if (centroAbierto) return { tipo: 'sentado', dibujo: hayAlertaFija() ? 'alerta' : 'atento', hasta: ahora + 2000 }
+  if (anterior && anterior.luego) return anterior.luego
+  // Con el centro abierto se queda sentado al lado, mirando hacia el panel.
+  if (centroAbierto) {
+    return { tipo: 'sentado', dibujo: hayAlertaFija() ? 'alerta' : alguno(['espaldas1', 'espaldas1', 'espaldas2']), hasta: ahora + azar(2500, 5000) }
+  }
   // Al despertar, se estira.
   if (anterior && anterior.tipo === 'dormir' && modo !== 'reunion') {
     return { tipo: 'sentado', dibujo: 'estirarse', hasta: ahora + 1800 }
   }
   if (modo === 'trabajando') {
     return Math.random() < 0.55
-      ? { tipo: 'caminar', objetivo: azar(MARGEN, ancho - MARGEN), velocidad: 150 }
+      ? { tipo: 'caminar', objetivo: azar(MARGEN, ancho - MARGEN), velocidad: 170 } // corre
       : { tipo: 'sentado', dibujo: 'tablet', hasta: ahora + azar(4000, 8000) }
   }
-  if (modo === 'reunion' || hayAlertaFija()) return { tipo: 'sentado', dibujo: 'alerta', hasta: ahora + 4000 }
+  // Reunión por empezar: saluda con la pata para llamar la atención y se queda con el "!".
+  if (modo === 'reunion') return secuencia(SALUDAR, { tipo: 'sentado', dibujo: 'alerta', hasta: ahora + duracion(SALUDAR) + 4000 })
+  if (hayAlertaFija()) return { tipo: 'sentado', dibujo: 'alerta', hasta: ahora + 4000 }
   const ganasDeDormir = modo === 'dormilon' ? 0.55 : 0.12
   const dado = Math.random()
   if (dado < ganasDeDormir) {
     return { tipo: 'dormir', desde: ahora, hasta: ahora + azar(15000, 40000), dibujo: alguno(['durmiendo', 'bolita']) }
   }
-  if (dado < ganasDeDormir + 0.35) {
+  if (dado < ganasDeDormir + 0.1) return secuencia(LAMERSE) // se acicala
+  if (dado < ganasDeDormir + 0.4) {
     return { tipo: 'sentado', dibujo: alguno(['sentado', 'sentado', 'atento', 'cola', 'contento']), hasta: ahora + azar(3000, 9000) }
   }
   return { tipo: 'caminar', objetivo: azar(MARGEN, ancho - MARGEN), velocidad: 55 }
+}
+
+// Un globo nuevo: mueve la boca como si lo dijera (salvo que esté corriendo o festejando).
+function hablar() {
+  if (arrastre || (accion && (accion.tipo === 'saltar' || accion.tipo === 'caminar'))) return
+  accion = secuencia(HABLAR)
+}
+
+// Salto al abrir el centro de mando.
+function brincar() {
+  accion = secuencia(SALTO)
+  $('gato').classList.remove('brinco')
+  void $('gato').offsetWidth // reinicia la animación
+  $('gato').classList.add('brinco')
 }
 
 function celebrar() {
@@ -257,6 +298,16 @@ function celebrar() {
   $('gato').classList.remove('saltando')
   void $('gato').offsetWidth // reinicia la animación
   $('gato').classList.add('saltando')
+}
+
+// Qué dibujo de la secuencia toca a los "transcurrido" ms; null si ya terminó.
+function cuadroDeSecuencia(cuadros, transcurrido) {
+  let acumulado = 0
+  for (const [dibujo, ms] of cuadros) {
+    acumulado += ms
+    if (transcurrido < acumulado) return dibujo
+  }
+  return null
 }
 
 let antes = performance.now()
@@ -280,14 +331,16 @@ function cuadro(ahora) {
         x = destino
         accion = null
       }
-      if (ahora - ultimoCuadro > (rapido ? 90 : 150)) {
+      if (ahora - ultimoCuadro > (rapido ? 85 : 150)) {
         paso = (paso + 1) % PASOS.length
         ultimoCuadro = ahora
       }
-      mostrarCuadro(PASOS[paso])
+      mostrarCuadro((rapido ? ZANCADAS : PASOS)[paso])
     } else if (accion.tipo === 'dormir') {
-      // Primero le da sueño; después se duerme del todo.
-      mostrarCuadro(ahora - accion.desde < 3000 ? 'sueno' : accion.dibujo)
+      // Bosteza, le da sueño y después se duerme del todo.
+      mostrarCuadro(cuadroDeSecuencia(BOSTEZO, ahora - accion.desde) || accion.dibujo)
+    } else if (accion.tipo === 'secuencia') {
+      mostrarCuadro(cuadroDeSecuencia(accion.cuadros, ahora - accion.desde) || accion.cuadros[accion.cuadros.length - 1][0])
     } else if (accion.tipo === 'saltar') {
       mostrarCuadro('listo')
     } else {
@@ -298,6 +351,8 @@ function cuadro(ahora) {
   x = limite(x)
   // La bolita no trae zZz dibujadas: se las agregamos.
   $('zzz').hidden = Boolean(arrastre) || cuadroActual !== 'bolita'
+  // Los de espaldas ya miran a la izquierda: con el panel a la izquierda van tal cual, a la derecha se espejan.
+  if (cuadroActual && cuadroActual.startsWith('espaldas')) direccion = ladoDelCentro === 'izquierda' ? 1 : -1
   $('gato').classList.toggle('izquierda', direccion < 0)
   $('mascota').style.transform = `translateX(${Math.round(x)}px)`
   requestAnimationFrame(cuadro)
@@ -312,9 +367,12 @@ addEventListener('resize', () => {
 
 const centroDelGato = () => Math.round(x + ANCHO_GATO / 2)
 
-api.alRecibirCentroVisible(visible => {
+api.alRecibirCentroVisible(({ visible, lado }) => {
+  const seAbrio = visible && !centroAbierto
   centroAbierto = visible
-  accion = null
+  ladoDelCentro = lado === 'derecha' ? 'derecha' : 'izquierda'
+  if (seAbrio) brincar() // salta al abrirlo y después se queda mirando el panel
+  else accion = null
 })
 
 // La bandeja o el atajo preguntan dónde está el gatito para abrir el centro a su lado.
@@ -360,7 +418,7 @@ addEventListener('mouseup', evento => {
   if (fueClic) {
     // Tocarlo abre (o cierra) el centro de mando a su lado.
     maullar()
-    accion = { tipo: 'sentado', dibujo: 'contento', hasta: performance.now() + 1200 }
+    accion = secuencia([['maullar2', 300], ['maullar1', 200]]) // si el centro se abre, enseguida salta
     api.alternarCentro(centroDelGato())
   } else {
     accion = { tipo: 'sentado', dibujo: 'sentado', hasta: performance.now() + 2500 }

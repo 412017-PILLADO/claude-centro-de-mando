@@ -49,6 +49,25 @@ body {
   }
 }
 
+/* Brinco al abrir el centro de mando (acompaña la secuencia salto1 → salto2 → salto3). */
+.gato.brinco {
+  animation: brinco 0.8s ease-out;
+}
+
+@keyframes brinco {
+  0%,
+  20% {
+    transform: translateY(0);
+  }
+  45% {
+    transform: translateY(-34px);
+  }
+  75%,
+  100% {
+    transform: translateY(0);
+  }
+}
+
 /* --- globos de alerta: el gatito "habla" ------------------------------------ */
 
 .alertas {
