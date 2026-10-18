@@ -360,7 +360,37 @@ aplicarPlegado(leer('plegado') === '1')
 $('btn-desplegar').onclick = () => aplicarPlegado(!document.body.classList.contains('plegado'))
 $('btn-ocultar').onclick = () => api.ocultar()
 
-new ResizeObserver(() => api.alto($('app').offsetHeight)).observe($('app'))
+// Alto que ocuparía todo el contenido sin scroll: lo que se ve más lo que quedó oculto en el panel.
+function altoCompleto() {
+  const panel = $('panel')
+  const oculto = document.body.classList.contains('plegado') ? 0 : panel.scrollHeight - panel.clientHeight
+  return $('app').offsetHeight + oculto
+}
+
+const medir = new ResizeObserver(() => api.alto(altoCompleto()))
+medir.observe($('app'))
+medir.observe($('panel-contenido'))
+
+// Manijas: abajo cambia el alto, el borde izquierdo el ancho; doble clic vuelve al tamaño automático.
+function manija(elemento, lado) {
+  elemento.addEventListener('pointerdown', evento => {
+    const desdeX = evento.screenX
+    const desdeY = evento.screenY
+    elemento.setPointerCapture(evento.pointerId)
+    api.redimensionInicio()
+    const mover = e => api.redimension(e.screenX - desdeX, e.screenY - desdeY, lado)
+    const soltar = () => {
+      elemento.removeEventListener('pointermove', mover)
+      api.redimensionFin()
+    }
+    elemento.addEventListener('pointermove', mover)
+    elemento.addEventListener('pointerup', soltar, { once: true })
+  })
+  elemento.addEventListener('dblclick', () => api.tamanoAutomatico())
+}
+
+manija($('agarre-alto'), 'alto')
+manija($('agarre-ancho'), 'ancho')
 
 // --- arranque --------------------------------------------------------------
 

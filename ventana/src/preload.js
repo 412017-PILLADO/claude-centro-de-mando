@@ -10,4 +10,8 @@ contextBridge.exposeInMainWorld('centro', {
   abrirUrl: url => ipcRenderer.send('abrir-url', url),
   ocultar: () => ipcRenderer.send('ocultar'),
   alto: px => ipcRenderer.send('alto', px),
+  redimensionInicio: () => ipcRenderer.send('redimension-inicio'),
+  redimension: (dx, dy, lado) => ipcRenderer.send('redimension', { dx, dy, lado }),
+  redimensionFin: () => ipcRenderer.send('redimension-fin'),
+  tamanoAutomatico: () => ipcRenderer.send('tamano-automatico'),
 })

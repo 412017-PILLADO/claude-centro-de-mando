@@ -11,8 +11,9 @@ const ATAJO = 'Control+Alt+Space'
 const SIN_SENAL_MS = 90_000 // el mod late cada 30 s
 const OLVIDAR_MS = 12 * 60 * 60 * 1000
 const ANCHO = 340
+const ANCHO_MINIMO = 300
+const ANCHO_MAXIMO = 760
 const ALTO_MINIMO = 64
-const ALTO_MAXIMO = 560
 
 let ventana = null
 let bandeja = null
@@ -179,23 +180,48 @@ function trabajarTicketEnClaude(ticket) {
 
 const archivoVentana = () => path.join(app.getPath('userData'), 'posicion.json')
 
+// Tamaño: el ancho lo elige la persona; el alto se ajusta al contenido hasta un tope,
+// que por defecto es lo que entra en la pantalla (así se ve todo sin scroll).
+// Si la persona la achica, ese alto pasa a ser el tope y aparece el scroll.
+const guardada = () => leerJson(archivoVentana()) ?? {}
+let ancho = ANCHO
+let altoMaximo = null // null = lo que entre en la pantalla
+let altoNatural = ALTO_MINIMO
+let inicioRedimension = null
+
 function posicionInicial() {
-  const guardada = leerJson(archivoVentana())
-  if (guardada) return guardada
+  const { x, y, width, altoMax } = guardada()
+  ancho = width ?? ANCHO
+  altoMaximo = altoMax ?? null
+  if (x !== undefined && y !== undefined) return { x, y }
   const { workArea } = screen.getPrimaryDisplay()
-  return { x: workArea.x + workArea.width - ANCHO - 12, y: workArea.y + 12 }
+  return { x: workArea.x + workArea.width - ancho - 12, y: workArea.y + 12 }
 }
 
 function guardarPosicion() {
   if (!ventana) return
   const [x, y] = ventana.getPosition()
-  fs.writeFileSync(archivoVentana(), JSON.stringify({ x, y }))
+  fs.writeFileSync(archivoVentana(), JSON.stringify({ x, y, width: ancho, altoMax: altoMaximo }))
+}
+
+function topeDeAlto() {
+  const { x, y } = ventana.getBounds()
+  const { workArea } = screen.getDisplayNearestPoint({ x, y })
+  const lugarEnPantalla = workArea.y + workArea.height - y - 8
+  return Math.max(ALTO_MINIMO, Math.min(altoMaximo ?? Infinity, lugarEnPantalla))
+}
+
+function ajustarTamano() {
+  if (!ventana) return
+  const { x, y } = ventana.getBounds()
+  const alto = Math.round(Math.max(ALTO_MINIMO, Math.min(altoNatural, topeDeAlto())))
+  ventana.setBounds({ x, y, width: Math.round(ancho), height: alto })
 }
 
 function crearVentana() {
   ventana = new BrowserWindow({
     ...posicionInicial(),
-    width: ANCHO,
+    width: ancho,
     height: ALTO_MINIMO,
     frame: false,
     transparent: true,
@@ -270,10 +296,41 @@ ipcMain.on('abrir-url', (_e, url) => typeof url === 'string' && url.startsWith('
 ipcMain.on('unirse', (_e, url) => unirse(url))
 ipcMain.on('probar-alerta', probarAlerta)
 ipcMain.on('ocultar', () => ventana?.hide())
-// La interfaz mide su contenido y la ventana toma ese alto.
+// La interfaz mide cuánto ocupa su contenido completo; la ventana toma ese alto hasta el tope.
 ipcMain.on('alto', (_e, alto) => {
-  if (!ventana || typeof alto !== 'number') return
-  ventana.setContentSize(ANCHO, Math.round(Math.min(ALTO_MAXIMO, Math.max(ALTO_MINIMO, alto))))
+  if (typeof alto !== 'number') return
+  altoNatural = alto
+  ajustarTamano()
+})
+
+// Manijas propias: una ventana transparente no se redimensiona desde los bordes en Windows.
+ipcMain.on('redimension-inicio', () => {
+  if (ventana) inicioRedimension = ventana.getBounds()
+})
+ipcMain.on('redimension', (_e, { dx, dy, lado }) => {
+  if (!ventana || !inicioRedimension || typeof dx !== 'number' || typeof dy !== 'number') return
+  const inicio = inicioRedimension
+  if (lado === 'ancho') {
+    // Crece hacia la izquierda: el borde derecho queda fijo.
+    ancho = Math.min(ANCHO_MAXIMO, Math.max(ANCHO_MINIMO, inicio.width - dx))
+    ventana.setBounds({ x: Math.round(inicio.x + inicio.width - ancho), y: inicio.y, width: Math.round(ancho), height: inicio.height })
+  } else {
+    altoMaximo = Math.max(ALTO_MINIMO, inicio.height + dy)
+    ajustarTamano()
+  }
+})
+ipcMain.on('redimension-fin', () => {
+  inicioRedimension = null
+  guardarPosicion()
+})
+ipcMain.on('tamano-automatico', () => {
+  if (!ventana) return
+  const antes = ventana.getBounds()
+  ancho = ANCHO
+  altoMaximo = null
+  ventana.setBounds({ ...antes, x: antes.x + antes.width - ANCHO, width: ANCHO }) // el borde derecho queda fijo
+  ajustarTamano()
+  guardarPosicion()
 })
 
 // --- arranque ----------------------------------------------------------

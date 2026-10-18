@@ -29,12 +29,20 @@ body {
   user-select: none;
 }
 
-/* Margen para que se vea la sombra dentro de la ventana transparente. */
+/* Margen para que se vea la sombra dentro de la ventana transparente.
+   La columna nunca pasa el alto de la ventana: si no entra, el panel se achica y hace scroll. */
 .app {
+  position: relative;
   padding: 8px;
   display: flex;
   flex-direction: column;
   gap: 6px;
+  max-height: 100vh;
+}
+
+.barra,
+.alerta {
+  flex: none;
 }
 
 svg {
@@ -156,7 +164,8 @@ body.plegado #btn-desplegar svg {
   border-radius: 12px;
   box-shadow: 0 10px 28px rgba(2, 6, 23, 0.5);
   padding: 4px 8px 8px;
-  max-height: 430px;
+  flex: 0 1 auto;
+  min-height: 0;
   overflow-y: auto;
 }
 
@@ -597,4 +606,43 @@ body.con-alerta .barra {
     opacity: 0;
     transform: translateY(-6px);
   }
+}
+
+/* --- manijas para cambiar el tamaño ----------------------------------- */
+
+.agarre-alto {
+  flex: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 10px;
+  margin-top: -6px;
+  cursor: ns-resize;
+  -webkit-app-region: no-drag;
+}
+
+.agarre-alto span {
+  width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(148, 163, 184, 0.3);
+  transition: background 0.15s;
+}
+
+.agarre-alto:hover span {
+  background: rgba(148, 163, 184, 0.7);
+}
+
+.agarre-ancho {
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 8px;
+  cursor: ew-resize;
+  -webkit-app-region: no-drag;
+}
+
+body.plegado .agarre-alto {
+  display: none;
 }

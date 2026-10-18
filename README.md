@@ -52,6 +52,7 @@ Claude Code (cada sesión)                       Ventana flotante
 ```
 
 - **No guarda ni pide credenciales.** Los tickets y las reuniones los trae el Claude de cada persona con *sus* conectores. El plugin encuentra los conectores solo, se llamen como se llamen.
+- Por defecto la ventana crece hasta mostrar todo sin scroll (con el alto de la pantalla como límite). Si la achicás, aparece el scroll.
 - Todo queda en tu máquina, en `~/.claude/centro/`.
 - Tickets y reuniones se renuevan cada 10 minutos mientras haya alguna sesión de Claude abierta. Las alertas de reuniones funcionan aunque no la haya, con la agenda que se cargó antes.
 
@@ -65,6 +66,7 @@ Claude Code (cada sesión)                       Ventana flotante
 | Trabajar un ticket con Claude Desktop | Botón ✳ del ticket (copia el pedido: pegalo con `Ctrl+V`) |
 | Entrar a una reunión | **Unirse** (en la lista, en el banner o en la notificación) |
 | Probar la alerta de reunión | **Probar alerta**, en la sección Reuniones |
+| Cambiar el tamaño | Arrastrá la rayita de abajo (alto) o el borde izquierdo (ancho). Doble clic: tamaño automático |
 | Plegar una sección / el panel | Clic en su título / flecha ⌄ de la barra |
 | Iniciar con Windows | Clic derecho en el gatito de la bandeja |
 
