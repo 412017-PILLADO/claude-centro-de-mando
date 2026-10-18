@@ -120,6 +120,6 @@ Si te piden instalar este repo, seguí estos pasos en orden y contale al usuario
 2. **Clonar.** Cloná el repo en `%USERPROFILE%\claude-plugins\claude-centro-de-mando` (creá la carpeta si no existe). Si ya existe y es este repo, hacé `git pull` en vez de clonar.
 3. **Instalar.** Corré `node instalar.js` dentro del repo. Tarda alrededor de un minuto porque descarga Electron. No sigas si termina con ✗: mostrale el error al usuario.
 4. **Conectores.** Revisá si en tu sesión hay herramientas de Jira (`searchJiraIssuesUsingJql`) y de Google Calendar (`list_events`). Si falta alguna, pedile al usuario que la conecte en claude.ai → Settings → Connectors con su cuenta del trabajo. No le pidas tokens ni contraseñas: no hacen falta.
-5. **Cierre.** Avisale que reinicie sus sesiones de Claude abiertas, y que la ventana ya está arriba a la derecha (`Ctrl+Alt+Espacio`).
+5. **Cierre.** Avisale que reinicie sus sesiones de Claude abiertas, y que el gatito ya pasea por la barra de tareas: tocándolo se abre el centro de mando.
 
 No modifiques archivos del repo durante la instalación.

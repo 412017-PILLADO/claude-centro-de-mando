@@ -70,7 +70,7 @@ paso('Abriendo la ventana')
 const electron = path.join(VENTANA, 'node_modules', 'electron', 'dist', enWindows ? 'electron.exe' : 'electron')
 if (fs.existsSync(electron)) {
   spawn(electron, [VENTANA], { cwd: VENTANA, detached: true, stdio: 'ignore' }).unref()
-  console.log('  Listo: la vas a ver arriba a la derecha (Ctrl+Alt+Espacio la muestra u oculta).')
+  console.log('  Listo: el gatito ya pasea por tu barra de tareas. Tocalo para abrir el centro de mando.')
 } else {
   console.log('  No encontré Electron; abrila con "npm start" dentro de la carpeta ventana.')
 }
