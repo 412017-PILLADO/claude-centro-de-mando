@@ -77,7 +77,6 @@ button {
   border: 1px solid var(--borde);
   border-radius: 12px;
   box-shadow: 0 6px 20px rgba(2, 6, 23, 0.45);
-  -webkit-app-region: drag;
 }
 
 /* Gatito: pixel art nítido; pestañea cada 5 s y se mueve cuando Claude está trabajando. */
@@ -616,7 +615,7 @@ body.con-alerta .barra {
   justify-content: center;
   align-items: center;
   height: 10px;
-  margin-top: -6px;
+  margin-bottom: -6px;
   cursor: ns-resize;
   -webkit-app-region: no-drag;
 }
@@ -643,9 +642,6 @@ body.con-alerta .barra {
   -webkit-app-region: no-drag;
 }
 
-body.plegado .agarre-alto {
-  display: none;
-}
 
 /* Quitar una sesión de la lista: aparece al pasar el mouse. */
 .quitar {

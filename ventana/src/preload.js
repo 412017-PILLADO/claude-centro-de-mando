@@ -16,4 +16,8 @@ contextBridge.exposeInMainWorld('centro', {
   redimensionFin: () => ipcRenderer.send('redimension-fin'),
   tamanoAutomatico: () => ipcRenderer.send('tamano-automatico'),
   mascotaInteractiva: si => ipcRenderer.send('mascota-interactiva', si),
+  alternarCentro: x => ipcRenderer.send('alternar-centro', x),
+  alRecibirCentroVisible: callback => ipcRenderer.on('centro-visible', (_event, visible) => callback(visible)),
+  alRecibirPedidoPosicion: callback => ipcRenderer.on('pedir-posicion', () => callback()),
+  alRecibirDecir: callback => ipcRenderer.on('decir', (_event, mensaje) => callback(mensaje)),
 })

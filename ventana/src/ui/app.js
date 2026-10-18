@@ -261,7 +261,6 @@ dibujarGato()
 // --- reuniones -------------------------------------------------------------
 
 const AVISO_ANTES_MS = 5 * 60_000
-const descartadas = new Set()
 
 const hora = iso => new Date(iso).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false })
 
@@ -310,33 +309,10 @@ function pintarReuniones(reuniones, ahora) {
   }
 }
 
-function pintarAlerta(reuniones, ahora) {
-  const reunion = reuniones.find(r => esInminente(r, ahora) && !descartadas.has(r.id))
-  $('alerta').hidden = !reunion
-  document.body.classList.toggle('con-alerta', Boolean(reunion))
-  if (!reunion) return
-  $('alerta-titulo').textContent = reunion.title
-  $('alerta-cuando').textContent = cuando(reunion, ahora)
-  $('alerta-unirse').hidden = !reunion.joinUrl
-  $('alerta-unirse').onclick = () => {
-    api.unirse(reunion.joinUrl)
-    descartadas.add(reunion.id)
-    pintar()
-  }
-  $('alerta-cerrar').onclick = () => {
-    descartadas.add(reunion.id)
-    pintar()
-  }
-}
-
+// Las alertas de reuniones las da el gatito; acá solo se lista la agenda.
 $('btn-probar').addEventListener('click', evento => {
   evento.stopPropagation()
   api.probarAlerta()
-})
-
-api.alRecibirAlerta(id => {
-  descartadas.delete(id)
-  pintar()
 })
 
 // --- barra -----------------------------------------------------------------
@@ -366,27 +342,22 @@ for (const seccion of document.querySelectorAll('.seccion')) {
   })
 }
 
-function aplicarPlegado(plegado) {
-  document.body.classList.toggle('plegado', plegado)
-  guardar('plegado', plegado ? '1' : '0')
-}
-
-aplicarPlegado(leer('plegado') === '1')
-$('btn-desplegar').onclick = () => aplicarPlegado(!document.body.classList.contains('plegado'))
 $('btn-ocultar').onclick = () => api.ocultar()
+addEventListener('keydown', evento => {
+  if (evento.key === 'Escape') api.ocultar()
+})
 
 // Alto que ocuparía todo el contenido sin scroll: lo que se ve más lo que quedó oculto en el panel.
 function altoCompleto() {
   const panel = $('panel')
-  const oculto = document.body.classList.contains('plegado') ? 0 : panel.scrollHeight - panel.clientHeight
-  return $('app').offsetHeight + oculto
+  return $('app').offsetHeight + panel.scrollHeight - panel.clientHeight
 }
 
 const medir = new ResizeObserver(() => api.alto(altoCompleto()))
 medir.observe($('app'))
 medir.observe($('panel-contenido'))
 
-// Manijas: abajo cambia el alto, el borde izquierdo el ancho; doble clic vuelve al tamaño automático.
+// Manijas: arriba cambia el alto, el borde izquierdo el ancho; doble clic vuelve al tamaño automático.
 function manija(elemento, lado) {
   elemento.addEventListener('pointerdown', evento => {
     const desdeX = evento.screenX
@@ -415,7 +386,6 @@ function pintar() {
   if (!ultimo) return
   const { ahora, sesiones, tickets, reuniones } = ultimo
   pintarBarra(ultimo)
-  pintarAlerta(reuniones, ahora)
   pintarReuniones(reuniones, ahora)
   pintarTickets(tickets, ahora)
   pintarSesiones(sesiones, ahora)

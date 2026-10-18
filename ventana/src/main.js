@@ -5,7 +5,8 @@ const path = require('node:path')
 
 const { gatoPng } = require('./icono')
 
-const CENTRO = path.join(os.homedir(), '.claude', 'centro')
+// CENTRO_DATOS permite leer otra carpeta (para pruebas con datos simulados).
+const CENTRO = process.env.CENTRO_DATOS || path.join(os.homedir(), '.claude', 'centro')
 const SESIONES = path.join(CENTRO, 'sesiones')
 const ATAJO = 'Control+Alt+Space'
 const SIN_SENAL_MS = 90_000 // el mod late cada 30 s
@@ -123,14 +124,19 @@ function unirse(url) {
   if (typeof url === 'string' && LINKS_PERMITIDOS.test(url)) shell.openExternal(url)
 }
 
+// Las alertas las da el gatito (globos sobre su cabeza). Si el gatito está apagado,
+// se usan las notificaciones de Windows.
+const hayGatito = () => Boolean(mascota && !mascota.isDestroyed())
+
 function alertarReunion(reunion, minutos) {
+  if (hayGatito()) {
+    mascota.webContents.send('alerta', reunion.id)
+    return
+  }
   const titulo = minutos > 0 ? `${reunion.title} en ${minutos} min` : `${reunion.title} empieza ahora`
   const aviso = new Notification({ title: titulo, body: reunion.joinUrl ? 'Clic para unirte.' : 'Sin link para unirse.' })
-  aviso.on('click', () => (reunion.joinUrl ? unirse(reunion.joinUrl) : mostrar()))
+  aviso.on('click', () => (reunion.joinUrl ? unirse(reunion.joinUrl) : abrirCentro()))
   aviso.show()
-  if (ventana && !ventana.isVisible()) ventana.showInactive()
-  ventana?.webContents.send('alerta', reunion.id)
-  mascota?.webContents.send('alerta', reunion.id)
 }
 
 function revisarReuniones() {
@@ -164,16 +170,21 @@ function probarAlerta() {
 }
 
 function avisar(titulo, cuerpo) {
+  if (hayGatito()) {
+    mascota.webContents.send('decir', { texto: `${titulo}: ${cuerpo}`, ms: 7000 })
+    return
+  }
   const aviso = new Notification({ title: titulo, body: cuerpo, silent: true })
-  aviso.on('click', mostrar)
+  aviso.on('click', () => abrirCentro())
   aviso.show()
 }
 
+// Sin gatito, se avisa por Windows cuando una sesión termina (el gatito lo hace solo).
 function avisarCambios(sesiones) {
-  const silencio = enReunion(Date.now()) // en una reunión no se avisa de Claude
+  const silencio = enReunion(Date.now()) || hayGatito() // en una reunión no se avisa de Claude
   for (const sesion of sesiones) {
     const antes = estadosPrevios.get(sesion.id)
-    if (antes === 'working' && sesion.status === 'waiting' && !ventana?.isFocused() && !silencio) {
+    if (antes === 'working' && sesion.status === 'waiting' && !ventana?.isVisible() && !silencio) {
       avisar(`✓ ${sesion.name}`, 'Claude terminó y te está esperando.')
     }
     estadosPrevios.set(sesion.id, sesion.status)
@@ -192,7 +203,7 @@ function enviarEstado() {
 // Vive en una franja transparente sobre la barra de tareas que deja pasar los clics;
 // solo se vuelve tocable cuando el mouse está sobre el gatito (lo decide la página).
 
-const ALTO_MASCOTA = 150
+const ALTO_MASCOTA = 340 // gatito + lugar para globos apilados encima
 let mascota = null
 
 const archivoAjustes = () => path.join(app.getPath('userData'), 'ajustes.json')
@@ -236,6 +247,14 @@ function alternarMascota(visible) {
   else mascota?.destroy()
 }
 
+// Tocar al gatito (o el atajo, o la bandeja) abre el centro de mando al lado del gato.
+// Si el pedido no viene del gatito, se le pregunta dónde está.
+function alternarCentroDesdeAfuera() {
+  if (ventana?.isVisible()) return cerrarCentro()
+  if (hayGatito()) mascota.webContents.send('pedir-posicion')
+  else abrirCentro()
+}
+
 let pendiente = null
 function enviarPronto() {
   clearTimeout(pendiente)
@@ -265,8 +284,10 @@ function trabajarTicketEnClaude(ticket) {
 
 // --- ventana -----------------------------------------------------------
 
-const archivoVentana = () => path.join(app.getPath('userData'), 'posicion.json')
+const archivoVentana = () => path.join(app.getPath('userData'), 'tamano.json')
 
+// El centro de mando ya no flota solo: se abre al tocar al gatito, al lado del gato y
+// apoyado sobre la barra de tareas (crece hacia arriba).
 // Tamaño: el ancho lo elige la persona; el alto se ajusta al contenido hasta un tope,
 // que por defecto es lo que entra en la pantalla (así se ve todo sin scroll).
 // Si la persona la achica, ese alto pasa a ser el tope y aparece el scroll.
@@ -275,39 +296,60 @@ let ancho = ANCHO
 let altoMaximo = null // null = lo que entre en la pantalla
 let altoNatural = ALTO_MINIMO
 let inicioRedimension = null
+let pisoDelPanel = null // borde de abajo del panel (y de pantalla): crece hacia arriba desde ahí
 
-function posicionInicial() {
-  const { x, y, width, altoMax } = guardada()
+function cargarTamano() {
+  const { width, altoMax } = guardada()
   ancho = width ?? ANCHO
   altoMaximo = altoMax ?? null
-  if (x !== undefined && y !== undefined) return { x, y }
-  const { workArea } = screen.getPrimaryDisplay()
-  return { x: workArea.x + workArea.width - ancho - 12, y: workArea.y + 12 }
 }
 
 function guardarPosicion() {
-  if (!ventana) return
-  const [x, y] = ventana.getPosition()
-  fs.writeFileSync(archivoVentana(), JSON.stringify({ x, y, width: ancho, altoMax: altoMaximo }))
+  fs.writeFileSync(archivoVentana(), JSON.stringify({ width: ancho, altoMax: altoMaximo }))
 }
 
+const areaDeTrabajo = () => screen.getPrimaryDisplay().workArea
+
 function topeDeAlto() {
-  const { x, y } = ventana.getBounds()
-  const { workArea } = screen.getDisplayNearestPoint({ x, y })
-  const lugarEnPantalla = workArea.y + workArea.height - y - 8
-  return Math.max(ALTO_MINIMO, Math.min(altoMaximo ?? Infinity, lugarEnPantalla))
+  const area = areaDeTrabajo()
+  const piso = pisoDelPanel ?? area.y + area.height - 8
+  return Math.max(ALTO_MINIMO, Math.min(altoMaximo ?? Infinity, piso - area.y - 8))
 }
 
 function ajustarTamano() {
   if (!ventana) return
-  const { x, y } = ventana.getBounds()
+  const { x } = ventana.getBounds()
+  const area = areaDeTrabajo()
+  const piso = pisoDelPanel ?? area.y + area.height - 8
   const alto = Math.round(Math.max(ALTO_MINIMO, Math.min(altoNatural, topeDeAlto())))
-  ventana.setBounds({ x, y, width: Math.round(ancho), height: alto })
+  ventana.setBounds({ x, y: Math.max(area.y + 8, piso - alto), width: Math.round(ancho), height: alto })
+}
+
+// gatoX: centro del gatito en la pantalla. Sin gatito, se abre abajo a la derecha.
+function abrirCentro(gatoX) {
+  if (!ventana) return
+  const area = areaDeTrabajo()
+  const centro = typeof gatoX === 'number' ? gatoX : area.x + area.width - 60
+  const separacion = 56 // medio gatito y un poco de aire
+  pisoDelPanel = area.y + area.height - 8
+  let x = centro - separacion - ancho // a la izquierda del gato…
+  if (x < area.x + 8) x = centro + separacion // …o a la derecha si no entra
+  x = Math.max(area.x + 8, Math.min(area.x + area.width - ancho - 8, x))
+  ventana.setBounds({ x: Math.round(x), y: pisoDelPanel - ALTO_MINIMO, width: Math.round(ancho), height: ALTO_MINIMO })
+  ajustarTamano()
+  ventana.show()
+  ventana.focus()
+}
+
+function cerrarCentro() {
+  ventana?.hide()
 }
 
 function crearVentana() {
+  cargarTamano()
   ventana = new BrowserWindow({
-    ...posicionInicial(),
+    x: 0,
+    y: 0,
     width: ancho,
     height: ALTO_MINIMO,
     frame: false,
@@ -322,21 +364,11 @@ function crearVentana() {
   })
   ventana.setAlwaysOnTop(true, 'floating')
   ventana.loadFile(path.join(__dirname, 'ui', 'index.html'))
-  ventana.once('ready-to-show', () => ventana.showInactive())
-  ventana.on('moved', guardarPosicion)
+  // El gatito se entera si el centro está abierto (se queda sentado al lado).
+  ventana.on('show', () => mascota?.webContents.send('centro-visible', true))
+  ventana.on('hide', () => mascota?.webContents.send('centro-visible', false))
   ventana.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
   ventana.webContents.on('will-navigate', evento => evento.preventDefault())
-}
-
-function mostrar() {
-  if (!ventana) return
-  ventana.show()
-  ventana.focus()
-}
-
-function alternar() {
-  if (!ventana) return
-  ventana.isVisible() ? ventana.hide() : mostrar()
 }
 
 // --- bandeja e inicio con Windows ---------------------------------------
@@ -345,13 +377,7 @@ const opcionesInicio = () => ({ path: process.execPath, args: [app.getAppPath()]
 
 function menuBandeja() {
   return Menu.buildFromTemplate([
-    { label: `Mostrar / ocultar   (${ATAJO.replace('Control', 'Ctrl')})`, click: alternar },
-    {
-      label: 'Siempre visible',
-      type: 'checkbox',
-      checked: ventana?.isAlwaysOnTop() ?? true,
-      click: item => ventana?.setAlwaysOnTop(item.checked, 'floating'),
-    },
+    { label: `Abrir el centro de mando   (${ATAJO.replace('Control', 'Ctrl')})`, click: alternarCentroDesdeAfuera },
     {
       label: 'Iniciar con Windows',
       type: 'checkbox',
@@ -377,7 +403,7 @@ function crearBandeja() {
   imagen.addRepresentation({ scaleFactor: 2, buffer: gatoPng(2) })
   bandeja = new Tray(imagen)
   bandeja.setToolTip('Centro de mando de Claude')
-  bandeja.on('click', alternar)
+  bandeja.on('click', alternarCentroDesdeAfuera)
   bandeja.on('right-click', () => bandeja.popUpContextMenu(menuBandeja()))
 }
 
@@ -393,7 +419,13 @@ ipcMain.on('mascota-interactiva', (evento, si) => {
 })
 ipcMain.on('ocultar-sesion', (_e, id) => ocultarSesion(id))
 ipcMain.on('probar-alerta', probarAlerta)
-ipcMain.on('ocultar', () => ventana?.hide())
+ipcMain.on('ocultar', cerrarCentro)
+// El gatito avisa que lo tocaron (o responde dónde está): x es su centro dentro de la franja.
+ipcMain.on('alternar-centro', (evento, x) => {
+  if (!mascota || evento.sender !== mascota.webContents || typeof x !== 'number') return
+  if (ventana?.isVisible()) return cerrarCentro()
+  abrirCentro(mascota.getBounds().x + x)
+})
 // La interfaz mide cuánto ocupa su contenido completo; la ventana toma ese alto hasta el tope.
 ipcMain.on('alto', (_e, alto) => {
   if (typeof alto !== 'number') return
@@ -413,7 +445,8 @@ ipcMain.on('redimension', (_e, { dx, dy, lado }) => {
     ancho = Math.min(ANCHO_MAXIMO, Math.max(ANCHO_MINIMO, inicio.width - dx))
     ventana.setBounds({ x: Math.round(inicio.x + inicio.width - ancho), y: inicio.y, width: Math.round(ancho), height: inicio.height })
   } else {
-    altoMaximo = Math.max(ALTO_MINIMO, inicio.height + dy)
+    // La manija del alto está arriba (el panel crece hacia arriba desde la barra de tareas).
+    altoMaximo = Math.max(ALTO_MINIMO, inicio.height - dy)
     ajustarTamano()
   }
 })
@@ -436,7 +469,9 @@ ipcMain.on('tamano-automatico', () => {
 if (!app.requestSingleInstanceLock()) {
   app.quit()
 } else {
-  app.on('second-instance', mostrar)
+  app.on('second-instance', () => {
+    if (!ventana?.isVisible()) alternarCentroDesdeAfuera()
+  })
   app.whenReady().then(() => {
     app.setAppUserModelId('centro-flotante')
     crearVentana()
@@ -444,11 +479,13 @@ if (!app.requestSingleInstanceLock()) {
     if (ajustes().mascota !== false) crearMascota()
     screen.on('display-metrics-changed', () => mascota?.setBounds(zonaMascota()))
     vigilar()
-    globalShortcut.register(ATAJO, alternar)
+    globalShortcut.register(ATAJO, alternarCentroDesdeAfuera)
     // Para revisar la interfaz sin mirarla: CENTRO_CAPTURA=ruta.png guarda una captura y cierra.
     if (process.env.CENTRO_CAPTURA) {
       ventana.webContents.once('did-finish-load', () =>
         setTimeout(async () => {
+          abrirCentro()
+          await new Promise(listo => setTimeout(listo, 400))
           if (process.env.CENTRO_PROBAR_ALERTA) {
             probarAlerta()
             await new Promise(listo => setTimeout(listo, 600))

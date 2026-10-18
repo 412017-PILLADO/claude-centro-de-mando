@@ -8,30 +8,17 @@
   </head>
   <body>
     <div id="app" class="app">
+      <div id="agarre-alto" class="agarre-alto" title="Arrastrá para cambiar el alto · doble clic: tamaño automático"><span></span></div>
+
       <header class="barra">
         <svg id="gato" class="gato" viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"></svg>
         <span class="titulo">Centro</span>
         <span class="separador">•</span>
         <span id="resumen" class="resumen">cargando…</span>
-        <button id="btn-desplegar" class="boton-icono" title="Desplegar / plegar">
-          <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" /></svg>
-        </button>
-        <button id="btn-ocultar" class="boton-icono" title="Ocultar (Ctrl+Alt+Espacio)">
+        <button id="btn-ocultar" class="boton-icono" title="Cerrar (Esc, o tocá al gatito)">
           <svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12" /></svg>
         </button>
       </header>
-
-      <div id="alerta" class="alerta" hidden>
-        <svg viewBox="0 0 24 24"><path d="M15 10l5-3v10l-5-3M3 6h12v12H3z" /></svg>
-        <div class="alerta-texto">
-          <div id="alerta-titulo" class="alerta-titulo"></div>
-          <div id="alerta-cuando" class="alerta-cuando"></div>
-        </div>
-        <button id="alerta-unirse" class="unirse">Unirse</button>
-        <button id="alerta-cerrar" class="boton-icono" title="Descartar">
-          <svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12" /></svg>
-        </button>
-      </div>
 
       <div id="panel" class="panel">
         <div id="panel-contenido">
@@ -71,7 +58,6 @@
         </div>
       </div>
 
-      <div id="agarre-alto" class="agarre-alto" title="Arrastrá para cambiar el alto · doble clic: tamaño automático"><span></span></div>
       <div id="agarre-ancho" class="agarre-ancho" title="Arrastrá para cambiar el ancho · doble clic: tamaño automático"></div>
     </div>
     <script src="gato.js"></script>

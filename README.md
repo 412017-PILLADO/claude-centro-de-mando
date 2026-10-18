@@ -7,8 +7,8 @@ Son dos piezas que trabajan juntas:
 | Pieza | Qué es | Qué muestra |
 | --- | --- | --- |
 | **Plugin** (`plugin/`) | Un plugin de Claude Code. Corre dentro de cada sesión. | Un panel *Centro de mando* en Claude, una línea de estado (carpeta · rama · cambios · % de contexto) y el comando `/centro`. |
-| **Gatito** (`ventana/`) | Una mascota pixel art que pasea por la barra de tareas. | Corre si Claude trabaja, salta cuando termina, te avisa si una sesión te espera, se duerme sin actividad, y antes de una reunión te deja unirte tocándolo. |
-| **Ventana** (`ventana/`) | Una app de escritorio (Electron), flotante y siempre visible. | Reuniones con botón **Unirse** y aviso 5 minutos antes, tickets por estado, y el estado de todas tus sesiones de Claude. |
+| **Gatito** (`ventana/`) | Una mascota pixel art que pasea por la barra de tareas (app de escritorio en Electron). | **Todas las alertas, como globos que dice el gatito**: sesión que terminó, reunión en 5 minutos (con **Unirse**), avisos. Cada globo se cierra con su ✕. Corre si Claude trabaja, salta cuando termina, se duerme sin actividad. |
+| **Centro de mando** (`ventana/`) | Un panel que se abre **tocando al gatito**, a su lado. | Reuniones, tickets de Jira por estado y el estado de todas tus sesiones de Claude. |
 
 ## Instalación
 
@@ -53,26 +53,28 @@ Claude Code (cada sesión)                       Ventana flotante
 ```
 
 - **No guarda ni pide credenciales.** Los tickets y las reuniones los trae el Claude de cada persona con *sus* conectores. El plugin encuentra los conectores solo, se llamen como se llamen.
-- Por defecto la ventana crece hasta mostrar todo sin scroll (con el alto de la pantalla como límite). Si la achicás, aparece el scroll.
+- El panel crece hacia arriba desde la barra de tareas hasta mostrar todo sin scroll (con el alto de la pantalla como límite). Si lo achicás, aparece el scroll.
+- Si apagás el gatito, las alertas pasan a ser notificaciones de Windows.
 - Todo queda en tu máquina, en `~/.claude/centro/`.
 - Tickets y reuniones se renuevan cada 10 minutos mientras haya alguna sesión de Claude abierta. Las alertas de reuniones funcionan aunque no la haya, con la agenda que se cargó antes.
 
-## Uso de la ventana
+## Uso
 
 | Acción | Cómo |
 | --- | --- |
-| Mostrar / ocultar | `Ctrl+Alt+Espacio`, o clic en el gatito de la bandeja |
-| Abrirla si la cerraste con *Salir* | Menú Inicio → **Centro de mando** |
+| Abrir / cerrar el centro de mando | **Tocá al gatito** (también `Ctrl+Alt+Espacio` o clic en el ícono de la bandeja). Para cerrar: tocalo de nuevo, ✕ o `Esc` |
+| Cerrar una alerta | La ✕ del globo (no vuelve, salvo que pase algo nuevo) |
+| Entrar a una reunión | **Unirse** en el globo del gatito o en la lista de reuniones |
+| Mover al gatito | Arrastralo |
 | Abrir un ticket en Jira | Clic en el ticket |
 | Trabajar un ticket con Claude Desktop | Botón ✳ del ticket (copia el pedido: pegalo con `Ctrl+V`) |
-| Entrar a una reunión | **Unirse** (en la lista, en el banner o en la notificación) |
 | Sacar una sesión de la lista | ✕ al pasar el mouse por la sesión (vuelve sola si la usás de nuevo) |
 | Probar la alerta de reunión | **Probar alerta**, en la sección Reuniones |
-| Cambiar el tamaño | Arrastrá la rayita de abajo (alto) o el borde izquierdo (ancho). Doble clic: tamaño automático |
-| Plegar una sección / el panel | Clic en su título / flecha ⌄ de la barra |
-| Mostrar / ocultar el gatito | Clic derecho en el gatito de la bandeja → *Gatito en el escritorio* |
-| Hacer maullar / mover al gatito | Tocalo / arrastralo |
-| Iniciar con Windows | Clic derecho en el gatito de la bandeja |
+| Cambiar el tamaño del panel | Rayita de arriba (alto) o borde izquierdo (ancho). Doble clic: tamaño automático |
+| Plegar una sección | Clic en su título |
+| Apagar / prender el gatito | Clic derecho en el ícono de la bandeja → *Gatito en el escritorio* |
+| Volver a abrir la app después de *Salir* | Menú Inicio → **Centro de mando** |
+| Iniciar con Windows | Clic derecho en el ícono de la bandeja |
 
 ## Si la descarga de Electron falla
 
@@ -106,7 +108,7 @@ claude plugin test plugin
 cd ventana && npm start
 ```
 
-`CENTRO_CAPTURA=captura.png npm start` guarda una captura de la ventana y cierra (`CENTRO_PROBAR_ALERTA=1` además dispara la alerta de prueba).
+`CENTRO_DATOS=<carpeta>` hace que la app lea datos simulados en vez de `~/.claude/centro`. `CENTRO_CAPTURA=captura.png npm start` abre el centro, guarda una captura y cierra (`CENTRO_PROBAR_ALERTA=1` además dispara la alerta de prueba).
 
 ---
 
