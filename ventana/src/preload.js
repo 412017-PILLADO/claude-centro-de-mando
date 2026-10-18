@@ -15,4 +15,5 @@ contextBridge.exposeInMainWorld('centro', {
   redimension: (dx, dy, lado) => ipcRenderer.send('redimension', { dx, dy, lado }),
   redimensionFin: () => ipcRenderer.send('redimension-fin'),
   tamanoAutomatico: () => ipcRenderer.send('tamano-automatico'),
+  mascotaInteractiva: si => ipcRenderer.send('mascota-interactiva', si),
 })

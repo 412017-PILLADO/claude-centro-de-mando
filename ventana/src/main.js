@@ -130,6 +130,7 @@ function alertarReunion(reunion, minutos) {
   aviso.show()
   if (ventana && !ventana.isVisible()) ventana.showInactive()
   ventana?.webContents.send('alerta', reunion.id)
+  mascota?.webContents.send('alerta', reunion.id)
 }
 
 function revisarReuniones() {
@@ -184,6 +185,55 @@ function enviarEstado() {
   const estado = armarEstado()
   avisarCambios(estado.sesiones)
   ventana.webContents.send('estado', estado)
+  mascota?.webContents.send('estado', estado)
+}
+
+// --- mascota: el gatito que pasea por la barra de tareas -----------------
+// Vive en una franja transparente sobre la barra de tareas que deja pasar los clics;
+// solo se vuelve tocable cuando el mouse está sobre el gatito (lo decide la página).
+
+const ALTO_MASCOTA = 150
+let mascota = null
+
+const archivoAjustes = () => path.join(app.getPath('userData'), 'ajustes.json')
+const ajustes = () => leerJson(archivoAjustes()) ?? {}
+const guardarAjuste = (clave, valor) => fs.writeFileSync(archivoAjustes(), JSON.stringify({ ...ajustes(), [clave]: valor }))
+
+function zonaMascota() {
+  const { workArea } = screen.getPrimaryDisplay()
+  return { x: workArea.x, y: workArea.y + workArea.height - ALTO_MASCOTA, width: workArea.width, height: ALTO_MASCOTA }
+}
+
+function crearMascota() {
+  if (mascota) return
+  mascota = new BrowserWindow({
+    ...zonaMascota(),
+    frame: false,
+    transparent: true,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    resizable: false,
+    movable: false,
+    focusable: false,
+    hasShadow: false,
+    show: false,
+    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true },
+  })
+  mascota.setAlwaysOnTop(true, 'floating')
+  mascota.setIgnoreMouseEvents(true, { forward: true })
+  mascota.loadFile(path.join(__dirname, 'ui', 'mascota.html'))
+  mascota.once('ready-to-show', () => mascota.showInactive())
+  mascota.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
+  mascota.webContents.on('will-navigate', evento => evento.preventDefault())
+  mascota.on('closed', () => {
+    mascota = null
+  })
+}
+
+function alternarMascota(visible) {
+  guardarAjuste('mascota', visible)
+  if (visible) crearMascota()
+  else mascota?.destroy()
 }
 
 let pendiente = null
@@ -308,6 +358,12 @@ function menuBandeja() {
       checked: app.getLoginItemSettings(opcionesInicio()).openAtLogin,
       click: item => app.setLoginItemSettings({ ...opcionesInicio(), openAtLogin: item.checked }),
     },
+    {
+      label: 'Gatito en el escritorio',
+      type: 'checkbox',
+      checked: Boolean(mascota),
+      click: item => alternarMascota(item.checked),
+    },
     { label: 'Probar alerta de reunión', click: probarAlerta },
     { label: 'Abrir carpeta de datos', click: () => shell.openPath(CENTRO) },
     { type: 'separator' },
@@ -331,6 +387,10 @@ ipcMain.on('pedir-estado', enviarEstado)
 ipcMain.on('trabajar-ticket', (_e, ticket) => trabajarTicketEnClaude(ticket))
 ipcMain.on('abrir-url', (_e, url) => typeof url === 'string' && url.startsWith('https://') && shell.openExternal(url))
 ipcMain.on('unirse', (_e, url) => unirse(url))
+// Solo la página de la mascota decide cuándo la franja deja de dejar pasar los clics.
+ipcMain.on('mascota-interactiva', (evento, si) => {
+  if (mascota && evento.sender === mascota.webContents) mascota.setIgnoreMouseEvents(!si, { forward: true })
+})
 ipcMain.on('ocultar-sesion', (_e, id) => ocultarSesion(id))
 ipcMain.on('probar-alerta', probarAlerta)
 ipcMain.on('ocultar', () => ventana?.hide())
@@ -381,6 +441,8 @@ if (!app.requestSingleInstanceLock()) {
     app.setAppUserModelId('centro-flotante')
     crearVentana()
     crearBandeja()
+    if (ajustes().mascota !== false) crearMascota()
+    screen.on('display-metrics-changed', () => mascota?.setBounds(zonaMascota()))
     vigilar()
     globalShortcut.register(ATAJO, alternar)
     // Para revisar la interfaz sin mirarla: CENTRO_CAPTURA=ruta.png guarda una captura y cierra.

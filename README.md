@@ -7,6 +7,7 @@ Son dos piezas que trabajan juntas:
 | Pieza | Qué es | Qué muestra |
 | --- | --- | --- |
 | **Plugin** (`plugin/`) | Un plugin de Claude Code. Corre dentro de cada sesión. | Un panel *Centro de mando* en Claude, una línea de estado (carpeta · rama · cambios · % de contexto) y el comando `/centro`. |
+| **Gatito** (`ventana/`) | Una mascota pixel art que pasea por la barra de tareas. | Corre si Claude trabaja, salta cuando termina, te avisa si una sesión te espera, se duerme sin actividad, y antes de una reunión te deja unirte tocándolo. |
 | **Ventana** (`ventana/`) | Una app de escritorio (Electron), flotante y siempre visible. | Reuniones con botón **Unirse** y aviso 5 minutos antes, tickets por estado, y el estado de todas tus sesiones de Claude. |
 
 ## Instalación
@@ -69,6 +70,8 @@ Claude Code (cada sesión)                       Ventana flotante
 | Probar la alerta de reunión | **Probar alerta**, en la sección Reuniones |
 | Cambiar el tamaño | Arrastrá la rayita de abajo (alto) o el borde izquierdo (ancho). Doble clic: tamaño automático |
 | Plegar una sección / el panel | Clic en su título / flecha ⌄ de la barra |
+| Mostrar / ocultar el gatito | Clic derecho en el gatito de la bandeja → *Gatito en el escritorio* |
+| Hacer maullar / mover al gatito | Tocalo / arrastralo |
 | Iniciar con Windows | Clic derecho en el gatito de la bandeja |
 
 ## Si la descarga de Electron falla
