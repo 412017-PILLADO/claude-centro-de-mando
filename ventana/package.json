@@ -1,0 +1,15 @@
+{
+  "name": "centro-flotante",
+  "version": "0.2.0",
+  "description": "Ventana flotante del Centro de mando de Claude Code.",
+  "main": "src/main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "acceso-directo": "node scripts/acceso-directo.js",
+    "postinstall": "node scripts/acceso-directo.js"
+  },
+  "devDependencies": {
+    "electron": "44.5.0"
+  }
+}

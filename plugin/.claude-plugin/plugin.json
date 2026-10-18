@@ -1,0 +1,7 @@
+{
+  "name": "centro-de-mando",
+  "version": "0.6.0",
+  "description": "Panel general: sesión actual, uso de contexto, tickets de Jira asignados, subagentes en vivo y proyectos recientes. Comparte su estado con la ventana flotante.",
+  "author": { "name": "Mateo Pillado" },
+  "types": "./types/index.d.ts"
+}

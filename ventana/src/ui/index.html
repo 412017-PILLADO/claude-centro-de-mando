@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'" />
+    <title>Centro de mando</title>
+    <link rel="stylesheet" href="estilos.css" />
+  </head>
+  <body>
+    <div id="app" class="app">
+      <header class="barra">
+        <svg id="gato" class="gato" viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"></svg>
+        <span class="titulo">Centro</span>
+        <span class="separador">•</span>
+        <span id="resumen" class="resumen">cargando…</span>
+        <button id="btn-desplegar" class="boton-icono" title="Desplegar / plegar">
+          <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" /></svg>
+        </button>
+        <button id="btn-ocultar" class="boton-icono" title="Ocultar (Ctrl+Alt+Espacio)">
+          <svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12" /></svg>
+        </button>
+      </header>
+
+      <div id="alerta" class="alerta" hidden>
+        <svg viewBox="0 0 24 24"><path d="M15 10l5-3v10l-5-3M3 6h12v12H3z" /></svg>
+        <div class="alerta-texto">
+          <div id="alerta-titulo" class="alerta-titulo"></div>
+          <div id="alerta-cuando" class="alerta-cuando"></div>
+        </div>
+        <button id="alerta-unirse" class="unirse">Unirse</button>
+        <button id="alerta-cerrar" class="boton-icono" title="Descartar">
+          <svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12" /></svg>
+        </button>
+      </div>
+
+      <div id="panel" class="panel">
+        <section class="seccion" data-seccion="reuniones">
+          <div class="seccion-titulo">
+            <svg viewBox="0 0 24 24"><path d="M4 6h16v14H4zM4 10h16M8 3v4M16 3v4" /></svg>
+            <span>Reuniones</span>
+            <button id="btn-probar" class="boton-chico" title="Simula una reunión que empieza en 5 minutos">Probar alerta</button>
+            <span id="cuenta-reuniones" class="cuenta"></span>
+            <svg class="flecha" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" /></svg>
+          </div>
+          <div class="seccion-cuerpo" id="reuniones"></div>
+        </section>
+
+        <section class="seccion" data-seccion="tickets">
+          <button class="seccion-titulo">
+            <svg viewBox="0 0 24 24"><path d="M3 9a3 3 0 0 0 0 6v3a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-3a3 3 0 0 1 0-6V6a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1zM14 5v14" /></svg>
+            <span>Mis tickets</span>
+            <span id="cuenta-tickets" class="cuenta"></span>
+            <svg class="flecha" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" /></svg>
+          </button>
+          <div class="seccion-cuerpo">
+            <div id="filtros" class="filtros"></div>
+            <div id="tickets"></div>
+          </div>
+        </section>
+
+        <section class="seccion" data-seccion="sesiones">
+          <button class="seccion-titulo">
+            <svg viewBox="0 0 24 24"><path d="M4 5h16v11H4zM8 20h8M12 16v4" /></svg>
+            <span>Sesiones de Claude</span>
+            <span id="cuenta-sesiones" class="cuenta"></span>
+            <svg class="flecha" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" /></svg>
+          </button>
+          <div class="seccion-cuerpo" id="sesiones"></div>
+        </section>
+      </div>
+    </div>
+    <script src="gato.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

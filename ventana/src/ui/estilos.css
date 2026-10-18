@@ -1,0 +1,600 @@
+:root {
+  --vidrio: linear-gradient(180deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.94));
+  --vidrio-tarjeta: rgba(148, 163, 184, 0.07);
+  --vidrio-tarjeta-hover: rgba(148, 163, 184, 0.13);
+  --borde: rgba(148, 163, 184, 0.16);
+  --texto: #e2e8f0;
+  --tenue: #94a3b8;
+  --muy-tenue: #64748b;
+  --acento: #f0855f;
+  --ok: #4ade80;
+  --aviso: #fbbf24;
+  --error: #f87171;
+  --por-hacer: #94a3b8;
+  --en-curso: #60a5fa;
+  --hecho: #4ade80;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  background: transparent;
+  color: var(--texto);
+  font: 12px/1.4 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* Margen para que se vea la sombra dentro de la ventana transparente. */
+.app {
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+}
+
+/* --- barra ------------------------------------------------------------ */
+
+.barra {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 8px 0 12px;
+  background: var(--vidrio);
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(2, 6, 23, 0.45);
+  -webkit-app-region: drag;
+}
+
+/* Gatito: pixel art nítido; pestañea cada 5 s y se mueve cuando Claude está trabajando. */
+.gato {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  stroke: none;
+  image-rendering: pixelated;
+}
+
+.gato .ojo {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pestaneo 5s infinite;
+}
+
+@keyframes pestaneo {
+  0%, 94%, 100% {
+    transform: scaleY(1);
+  }
+  97% {
+    transform: scaleY(0.1);
+  }
+}
+
+body.trabajando .gato {
+  animation: saltito 0.9s ease-in-out infinite;
+}
+
+@keyframes saltito {
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+.titulo {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.separador {
+  color: var(--muy-tenue);
+  font-size: 10px;
+}
+
+.resumen {
+  flex: 1;
+  min-width: 0;
+  color: var(--tenue);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.boton-icono {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  color: var(--tenue);
+}
+
+.boton-icono:hover {
+  background: var(--vidrio-tarjeta-hover);
+  color: var(--texto);
+}
+
+#btn-desplegar svg {
+  transition: transform 0.15s;
+}
+
+body.plegado #btn-desplegar svg {
+  transform: rotate(-90deg);
+}
+
+/* --- panel desplegable ------------------------------------------------ */
+
+.panel {
+  background: var(--vidrio);
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+  box-shadow: 0 10px 28px rgba(2, 6, 23, 0.5);
+  padding: 4px 8px 8px;
+  max-height: 430px;
+  overflow-y: auto;
+}
+
+body.plegado .panel {
+  display: none;
+}
+
+.seccion + .seccion {
+  border-top: 1px solid var(--borde);
+}
+
+.seccion-titulo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 4px 7px;
+  color: var(--tenue);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-align: left;
+}
+
+.seccion-titulo span:first-of-type {
+  flex: 1;
+}
+
+.seccion-titulo:hover {
+  color: var(--texto);
+}
+
+.seccion-titulo .flecha {
+  width: 14px;
+  height: 14px;
+  transition: transform 0.15s;
+}
+
+.seccion.cerrada .flecha {
+  transform: rotate(-90deg);
+}
+
+.seccion.cerrada .seccion-cuerpo {
+  display: none;
+}
+
+.cuenta {
+  min-width: 18px;
+  padding: 0 6px;
+  border-radius: 9px;
+  background: var(--vidrio-tarjeta-hover);
+  color: var(--texto);
+  font-size: 10px;
+  text-align: center;
+  letter-spacing: 0;
+}
+
+.vacio {
+  color: var(--tenue);
+  padding: 2px 4px 8px;
+}
+
+.pie {
+  color: var(--muy-tenue);
+  font-size: 11px;
+  padding: 2px 4px 4px;
+}
+
+/* --- tickets ---------------------------------------------------------- */
+
+.filtros {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  padding: 0 2px 6px;
+}
+
+.filtro {
+  padding: 2px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--borde);
+  color: var(--tenue);
+  font-size: 11px;
+}
+
+.filtro:hover {
+  color: var(--texto);
+}
+
+.filtro.activo {
+  background: var(--texto);
+  border-color: var(--texto);
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.ticket {
+  position: relative;
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  margin-bottom: 4px;
+  padding: 7px 8px 7px 12px;
+  border-radius: 9px;
+  background: var(--vidrio-tarjeta);
+  border: 1px solid transparent;
+  text-align: left;
+}
+
+.ticket::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--color-estado, var(--por-hacer));
+}
+
+.ticket:hover {
+  background: var(--vidrio-tarjeta-hover);
+  border-color: var(--borde);
+}
+
+.ticket-cuerpo {
+  flex: 1;
+  min-width: 0;
+}
+
+.ticket-cabeza {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.clave {
+  color: var(--acento);
+  font-weight: 700;
+}
+
+.prioridad {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.prioridad.alta {
+  color: var(--error);
+}
+
+.prioridad.baja {
+  color: var(--en-curso);
+}
+
+.estado {
+  margin-left: auto;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--color-estado, var(--por-hacer));
+  background: color-mix(in srgb, var(--color-estado, var(--por-hacer)) 16%, transparent);
+}
+
+.resumen-ticket {
+  margin-top: 3px;
+  color: var(--tenue);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.ticket:hover .resumen-ticket {
+  color: var(--texto);
+}
+
+.ticket-claude {
+  align-self: center;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  color: var(--acento);
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.ticket:hover .ticket-claude {
+  opacity: 1;
+}
+
+.ticket-claude:hover {
+  background: color-mix(in srgb, var(--acento) 18%, transparent);
+}
+
+/* --- sesiones --------------------------------------------------------- */
+
+.sesion {
+  padding: 6px 4px 7px;
+  border-radius: 8px;
+}
+
+.sesion:hover {
+  background: var(--vidrio-tarjeta);
+}
+
+.fila {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.crece {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nombre {
+  font-weight: 600;
+}
+
+.tenue {
+  color: var(--tenue);
+}
+
+.aviso {
+  color: var(--aviso);
+}
+
+.punto {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--muy-tenue);
+}
+
+.punto.working {
+  background: var(--acento);
+  animation: latido 1.2s ease-in-out infinite;
+}
+
+.punto.waiting {
+  background: var(--ok);
+}
+
+@keyframes latido {
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.contexto {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 4px 0 0 14px;
+  color: var(--muy-tenue);
+  font-size: 11px;
+}
+
+.mini-barra {
+  flex: 1;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(148, 163, 184, 0.15);
+  overflow: hidden;
+}
+
+.mini-barra > div {
+  height: 100%;
+  background: var(--ok);
+}
+
+.mini-barra.medio > div {
+  background: var(--aviso);
+}
+
+.mini-barra.alto > div {
+  background: var(--error);
+}
+
+.agente {
+  margin: 3px 0 0 14px;
+  color: var(--tenue);
+  font-size: 11px;
+}
+
+.agente b {
+  color: var(--acento);
+  font-weight: 600;
+}
+
+.boton-chico {
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--borde);
+  color: var(--tenue);
+  font-size: 11px;
+}
+
+.boton-chico:hover {
+  color: var(--texto);
+  background: var(--vidrio-tarjeta-hover);
+}
+
+.panel::-webkit-scrollbar {
+  width: 6px;
+}
+
+.panel::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.25);
+  border-radius: 3px;
+}
+
+/* --- reuniones -------------------------------------------------------- */
+
+.seccion-titulo {
+  cursor: pointer;
+}
+
+.seccion-titulo .boton-chico {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 500;
+  padding: 1px 7px;
+}
+
+.reunion {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 4px;
+  border-radius: 8px;
+}
+
+.reunion:hover {
+  background: var(--vidrio-tarjeta);
+}
+
+.reunion.ahora {
+  background: color-mix(in srgb, var(--acento) 12%, transparent);
+}
+
+.hora {
+  width: 74px;
+  flex: none;
+  color: var(--tenue);
+  font-variant-numeric: tabular-nums;
+}
+
+.reunion.ahora .hora {
+  color: var(--acento);
+  font-weight: 600;
+}
+
+.dia {
+  padding: 6px 4px 2px;
+  color: var(--muy-tenue);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.unirse {
+  padding: 3px 10px;
+  border-radius: 7px;
+  background: var(--acento);
+  color: #1b1b1f;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.unirse:hover {
+  filter: brightness(1.1);
+}
+
+.unirse.chico {
+  padding: 1px 8px;
+  font-size: 11px;
+}
+
+/* Banner de alerta: aparece 5 minutos antes y durante la reunión. */
+.alerta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 8px 9px 12px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(120, 53, 15, 0.95), rgba(67, 20, 7, 0.95));
+  border: 1px solid color-mix(in srgb, var(--acento) 60%, transparent);
+  box-shadow: 0 6px 20px rgba(2, 6, 23, 0.45);
+  animation: entrar 0.25s ease-out;
+}
+
+.alerta[hidden] {
+  display: none;
+}
+
+.alerta > svg {
+  width: 20px;
+  height: 20px;
+  color: var(--acento);
+}
+
+.alerta-texto {
+  flex: 1;
+  min-width: 0;
+}
+
+.alerta-titulo {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.alerta-cuando {
+  color: #fdba74;
+  font-size: 11px;
+}
+
+body.con-alerta .barra {
+  border-color: color-mix(in srgb, var(--acento) 55%, transparent);
+}
+
+@keyframes entrar {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
