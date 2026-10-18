@@ -25,12 +25,13 @@ body {
   cursor: grabbing;
 }
 
-.gato svg {
+/* Brillo suave alrededor: un gato negro sobre la barra de tareas oscura se perdería. */
+.gato img {
   display: block;
-  shape-rendering: crispEdges;
+  filter: drop-shadow(0 0 1px rgba(226, 232, 240, 0.55)) drop-shadow(0 0 3px rgba(226, 232, 240, 0.2));
 }
 
-.gato.izquierda svg {
+.gato.izquierda img {
   transform: scaleX(-1);
 }
 
@@ -40,7 +41,7 @@ body {
 
 @keyframes salto {
   40% {
-    transform: translateY(-28px);
+    transform: translateY(-22px);
   }
 }
 

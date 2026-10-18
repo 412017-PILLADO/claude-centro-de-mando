@@ -8,7 +8,8 @@
     "start": "electron .",
     "acceso-directo": "node scripts/acceso-directo.js",
     "postinstall": "node scripts/descargar-electron.js && node scripts/acceso-directo.js",
-    "descargar-electron": "node scripts/descargar-electron.js"
+    "descargar-electron": "node scripts/descargar-electron.js",
+    "cortar-hoja": "electron scripts/cortar-hoja.js"
   },
   "devDependencies": {
     "electron": "44.5.0"

@@ -84,6 +84,16 @@ set ELECTRON_MIRROR=https://espejo.interno/electron/
 
 y volver a correr `node instalar.js`.
 
+## Cambiar el gatito
+
+Los dibujos salen de una hoja 4×4 con fondo transparente: `ventana/arte/gatito-hoja.webp`. Para usar otro gatito, reemplazá esa imagen (mismo orden de dibujos, mirando a la derecha) y corré:
+
+```bash
+cd ventana && npm run cortar-hoja
+```
+
+Orden de la hoja, por filas: sentado · contento · atento · cola / caminar 1-4 / alerta (!) · tablet · listo (✓) · duda (?) / sueño · durmiendo (zZz) · bolita · estirarse.
+
 ## Desarrollo
 
 ```bash

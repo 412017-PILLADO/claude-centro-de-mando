@@ -1,15 +1,16 @@
 // La mascota: un gatito que pasea por la barra de tareas y reacciona a lo que hace Claude.
-//   · Una sesión trabajando  → corre de un lado a otro.
-//   · Una sesión terminó     → salta y avisa "¡Listo!".
-//   · Una sesión te espera   → se sienta y te lo dice.
+//   · Una sesión trabajando  → corre, o se sienta con la tablet.
+//   · Una sesión terminó     → salta con un ✓ y avisa "¡Listo!".
+//   · Una sesión te espera   → se sienta con un "!" y te lo dice.
 //   · Reunión en 5 min       → te avisa; tocarlo te une a la reunión.
-//   · Sin actividad          → pasea tranquilo y a veces se duerme (más si no hay nada abierto).
-// Tocarlo lo hace maullar; se puede arrastrar.
+//   · Sin actividad          → pasea tranquilo; a veces le da sueño, duerme y al despertar se estira.
+// Tocarlo lo hace maullar (pone cara de contento); se puede arrastrar (pone cara de duda).
+// Los dibujos están en sprites/, todos del mismo tamaño y mirando a la derecha.
 const api = window.centro
-const { CUADROS, COLORES } = window.GATO_LADO
 
 const $ = id => document.getElementById(id)
-const ESCALA = 4
+const ALTO_GATO = 84
+const ANCHO_GATO = Math.round((ALTO_GATO * 234) / 237)
 const MARGEN = 90 // para que el globo no se salga de la pantalla
 const AVISO_REUNION_MS = 5 * 60_000
 const RECIENTE_MS = 10 * 60_000
@@ -17,36 +18,29 @@ const DORMILON_MS = 30 * 60_000
 
 // --- dibujo ---------------------------------------------------------------
 
-const svgs = {}
-for (const [nombre, cuadro] of Object.entries(CUADROS)) {
-  const ns = 'http://www.w3.org/2000/svg'
-  const svg = document.createElementNS(ns, 'svg')
-  svg.setAttribute('width', cuadro[0].length * ESCALA)
-  svg.setAttribute('height', cuadro.length * ESCALA)
-  svg.setAttribute('viewBox', `0 0 ${cuadro[0].length} ${cuadro.length}`)
-  cuadro.forEach((fila, y) =>
-    [...fila].forEach((letra, x) => {
-      if (!COLORES[letra]) return
-      const pixel = document.createElementNS(ns, 'rect')
-      pixel.setAttribute('x', x)
-      pixel.setAttribute('y', y)
-      pixel.setAttribute('width', 1)
-      pixel.setAttribute('height', 1)
-      pixel.setAttribute('fill', COLORES[letra])
-      svg.append(pixel)
-    }),
-  )
-  svg.style.display = 'none'
-  $('gato').append(svg)
-  svgs[nombre] = svg
+const DIBUJOS = [
+  'sentado', 'contento', 'atento', 'cola', 'caminar1', 'caminar2', 'caminar3', 'caminar4',
+  'alerta', 'tablet', 'listo', 'duda', 'sueno', 'durmiendo', 'bolita', 'estirarse',
+]
+const PASOS = ['caminar1', 'caminar2', 'caminar3', 'caminar4']
+
+const imagenes = {}
+for (const nombre of DIBUJOS) {
+  const img = document.createElement('img')
+  img.src = `sprites/${nombre}.png`
+  img.alt = ''
+  img.draggable = false
+  img.height = ALTO_GATO
+  img.style.display = 'none'
+  $('gato').append(img)
+  imagenes[nombre] = img
 }
-const ANCHO_GATO = CUADROS.sentado[0].length * ESCALA
 
 let cuadroActual = null
 function mostrarCuadro(nombre) {
   if (nombre === cuadroActual) return
-  if (cuadroActual) svgs[cuadroActual].style.display = 'none'
-  svgs[nombre].style.display = 'block'
+  if (cuadroActual) imagenes[cuadroActual].style.display = 'none'
+  imagenes[nombre].style.display = 'block'
   cuadroActual = nombre
 }
 
@@ -146,21 +140,35 @@ api.alRecibirEstado(({ ahora, sesiones, reuniones }) => {
 let ancho = innerWidth
 let x = innerWidth - MARGEN - ANCHO_GATO - 160
 let direccion = -1
-let accion = null // { tipo: 'caminar' | 'sentado' | 'dormir' | 'saltar', hasta, objetivo, velocidad }
+// accion: { tipo: 'caminar' | 'sentado' | 'dormir' | 'saltar', hasta, objetivo, velocidad, dibujo, desde }
+let accion = null
 let arrastre = null
 let ultimoCuadro = 0
-let pasoAlterno = false
+let paso = 0
 
 const azar = (min, max) => min + Math.random() * (max - min)
+const alguno = lista => lista[Math.floor(Math.random() * lista.length)]
 const limite = valor => Math.max(MARGEN, Math.min(ancho - MARGEN - ANCHO_GATO, valor))
 
-function elegirAccion(ahora) {
-  if (modo === 'trabajando') return { tipo: 'caminar', objetivo: azar(MARGEN, ancho - MARGEN), velocidad: 150 }
-  if (modo === 'esperando' || modo === 'reunion') return { tipo: 'sentado', hasta: ahora + 4000 }
+function elegirAccion(ahora, anterior) {
+  // Al despertar, se estira.
+  if (anterior && anterior.tipo === 'dormir' && modo !== 'reunion') {
+    return { tipo: 'sentado', dibujo: 'estirarse', hasta: ahora + 1800 }
+  }
+  if (modo === 'trabajando') {
+    return Math.random() < 0.55
+      ? { tipo: 'caminar', objetivo: azar(MARGEN, ancho - MARGEN), velocidad: 150 }
+      : { tipo: 'sentado', dibujo: 'tablet', hasta: ahora + azar(4000, 8000) }
+  }
+  if (modo === 'esperando' || modo === 'reunion') return { tipo: 'sentado', dibujo: 'alerta', hasta: ahora + 4000 }
   const ganasDeDormir = modo === 'dormilon' ? 0.55 : 0.12
   const dado = Math.random()
-  if (dado < ganasDeDormir) return { tipo: 'dormir', hasta: ahora + azar(15000, 40000) }
-  if (dado < ganasDeDormir + 0.35) return { tipo: 'sentado', hasta: ahora + azar(3000, 9000) }
+  if (dado < ganasDeDormir) {
+    return { tipo: 'dormir', desde: ahora, hasta: ahora + azar(15000, 40000), dibujo: alguno(['durmiendo', 'bolita']) }
+  }
+  if (dado < ganasDeDormir + 0.35) {
+    return { tipo: 'sentado', dibujo: alguno(['sentado', 'sentado', 'atento', 'cola', 'contento']), hasta: ahora + azar(3000, 9000) }
+  }
   return { tipo: 'caminar', objetivo: azar(MARGEN, ancho - MARGEN), velocidad: 55 }
 }
 
@@ -180,35 +188,37 @@ function cuadro(ahora) {
   if (!globoFijo && !$('burbuja').hidden && ahora > globoHasta) cerrarGlobo()
 
   if (arrastre) {
-    mostrarCuadro('sentado')
+    mostrarCuadro('duda')
   } else {
-    if (!accion || (accion.hasta && ahora > accion.hasta)) accion = elegirAccion(ahora)
+    if (!accion || (accion.hasta && ahora > accion.hasta)) accion = elegirAccion(ahora, accion)
 
     if (accion.tipo === 'caminar') {
       const destino = limite(accion.objetivo)
+      const rapido = accion.velocidad > 100
       direccion = destino > x ? 1 : -1
       x += direccion * accion.velocidad * dt
       if ((direccion > 0 && x >= destino) || (direccion < 0 && x <= destino)) {
         x = destino
         accion = null
       }
-      const ritmo = accion && accion.velocidad > 100 ? 90 : 160
-      if (ahora - ultimoCuadro > ritmo) {
-        pasoAlterno = !pasoAlterno
+      if (ahora - ultimoCuadro > (rapido ? 90 : 150)) {
+        paso = (paso + 1) % PASOS.length
         ultimoCuadro = ahora
       }
-      mostrarCuadro(pasoAlterno ? 'caminar1' : 'caminar2')
+      mostrarCuadro(PASOS[paso])
     } else if (accion.tipo === 'dormir') {
-      mostrarCuadro('dormido')
+      // Primero le da sueño; después se duerme del todo.
+      mostrarCuadro(ahora - accion.desde < 3000 ? 'sueno' : accion.dibujo)
     } else if (accion.tipo === 'saltar') {
-      mostrarCuadro('caminar1')
+      mostrarCuadro('listo')
     } else {
-      mostrarCuadro('sentado')
+      mostrarCuadro(accion.dibujo || 'sentado')
     }
   }
 
   x = limite(x)
-  $('zzz').hidden = !(accion && accion.tipo === 'dormir') || Boolean(arrastre)
+  // La bolita no trae zZz dibujadas: se las agregamos.
+  $('zzz').hidden = arrastre || cuadroActual !== 'bolita'
   $('gato').classList.toggle('izquierda', direccion < 0)
   $('mascota').style.transform = `translateX(${Math.round(x)}px)`
   requestAnimationFrame(cuadro)
@@ -258,7 +268,7 @@ addEventListener('mouseup', evento => {
   const fueClic = !arrastre.movido
   arrastre = null
   $('gato').classList.remove('arrastrando')
-  accion = { tipo: 'sentado', hasta: performance.now() + 3000 }
+  accion = { tipo: 'sentado', dibujo: fueClic ? 'contento' : 'sentado', hasta: performance.now() + 2500 }
   if (fueClic) {
     maullar()
     if (modo === 'reunion' && reunion) api.unirse(reunion.joinUrl)
@@ -268,7 +278,7 @@ addEventListener('mouseup', evento => {
 })
 
 api.alRecibirAlerta(() => {
-  accion = { tipo: 'sentado', hasta: performance.now() + 5000 }
+  accion = { tipo: 'sentado', dibujo: 'alerta', hasta: performance.now() + 5000 }
 })
 
 api.pedirEstado()
