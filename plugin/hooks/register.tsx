@@ -28,6 +28,8 @@ const HEARTBEAT_MS = 30_000
 const TICKETS_EVERY_MS = 10 * 60_000
 let activity: 'working' | 'waiting' | 'closed' = 'waiting'
 let startedAt = 0
+// Último prompt o última respuesta: distingue "terminó recién" de "quedó abierta hace horas".
+let lastActivityAt = 0
 
 // Las conversaciones sueltas de la app de escritorio corren en una carpeta temporal.
 const isScratch = (cwd: string) => /[\\/]scratch-workspaces[\\/]/i.test(cwd)
@@ -88,7 +90,6 @@ async function refreshUsage($: EngineInterface) {
     percent: figures.context.percent ?? null,
     tokens: figures.context.tokens ?? null,
     window: figures.context.window,
-    costUsd: figures.cost?.usd ?? null,
     limits: figures.rateLimits.map(one => ({ kind: one.kind, percentUsed: one.percentUsed })),
   }
   await update($, usage, () => next)
@@ -398,6 +399,7 @@ async function publishSession($: EngineInterface) {
     ...current,
     status: activity,
     startedAt,
+    lastActivityAt: lastActivityAt || startedAt,
     updatedAt: await $.clock.now(),
     usage: await read($, usage),
     agents: list.filter(one => one.endedAt === null || list.indexOf(one) >= list.length - 5),
@@ -446,6 +448,7 @@ export const register: Register = on => {
 
   on('prompt.submit', async ($, e, next) => {
     activity = 'working'
+    lastActivityAt = await $.clock.now()
     void publishSession($)
 
     return next(e)
@@ -498,6 +501,7 @@ export const register: Register = on => {
     const agentId = e.agentId
     if (!agentId) {
       activity = 'waiting'
+      lastActivityAt = await $.clock.now()
       void refreshUsage($)
       return next(e)
     }
@@ -567,7 +571,6 @@ export const register: Register = on => {
                   {thousands(used.window)} tokens
                 </Text>
               </Text>
-              {used.costUsd !== null && <Text dimColor>Costo de la sesión: US$ {used.costUsd.toFixed(2)}</Text>}
               {used.limits.map(one => (
                 <Text key={one.kind} dimColor>
                   Límite {one.kind}: {Math.round(one.percentUsed)}%

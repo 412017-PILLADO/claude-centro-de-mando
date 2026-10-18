@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld('centro', {
   pedirEstado: () => ipcRenderer.send('pedir-estado'),
   alRecibirAlerta: callback => ipcRenderer.on('alerta', (_event, id) => callback(id)),
   unirse: url => ipcRenderer.send('unirse', url),
+  ocultarSesion: id => ipcRenderer.send('ocultar-sesion', id),
   probarAlerta: () => ipcRenderer.send('probar-alerta'),
   trabajarTicket: ticket => ipcRenderer.send('trabajar-ticket', ticket),
   abrirUrl: url => ipcRenderer.send('abrir-url', url),

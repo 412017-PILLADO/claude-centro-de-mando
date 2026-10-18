@@ -46,10 +46,47 @@ function leerSesiones(ahora) {
       fs.rm(archivo, { force: true }, () => {})
       continue
     }
+    if (estaOculta(sesion)) continue
     sesiones.push({ ...sesion, sinSenal: edad > SIN_SENAL_MS })
   }
 
-  return sesiones.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))
+  return sesiones.sort((a, b) => ultimaActividad(b) - ultimaActividad(a))
+}
+
+const ultimaActividad = sesion => sesion.lastActivityAt || sesion.startedAt || sesion.updatedAt || 0
+
+// --- sesiones quitadas de la lista -------------------------------------
+// Una sesión quitada vuelve a aparecer sola si se la usa de nuevo.
+
+const archivoOcultas = () => path.join(app.getPath('userData'), 'sesiones-ocultas.json')
+let ocultas = null // id → última actividad al momento de quitarla
+
+function cargarOcultas() {
+  if (!ocultas) ocultas = new Map(Object.entries(leerJson(archivoOcultas()) ?? {}))
+  return ocultas
+}
+
+function guardarOcultas() {
+  fs.writeFileSync(archivoOcultas(), JSON.stringify(Object.fromEntries(cargarOcultas())))
+}
+
+function estaOculta(sesion) {
+  const lista = cargarOcultas()
+  if (!lista.has(sesion.id)) return false
+  if (sesion.status === 'working' || ultimaActividad(sesion) > lista.get(sesion.id)) {
+    lista.delete(sesion.id)
+    guardarOcultas()
+    return false
+  }
+  return true
+}
+
+function ocultarSesion(id) {
+  if (typeof id !== 'string') return
+  const sesion = leerJson(path.join(SESIONES, `${path.basename(id)}.json`))
+  cargarOcultas().set(id, sesion ? ultimaActividad(sesion) : Date.now())
+  guardarOcultas()
+  enviarEstado()
 }
 
 function armarEstado() {
@@ -294,6 +331,7 @@ ipcMain.on('pedir-estado', enviarEstado)
 ipcMain.on('trabajar-ticket', (_e, ticket) => trabajarTicketEnClaude(ticket))
 ipcMain.on('abrir-url', (_e, url) => typeof url === 'string' && url.startsWith('https://') && shell.openExternal(url))
 ipcMain.on('unirse', (_e, url) => unirse(url))
+ipcMain.on('ocultar-sesion', (_e, id) => ocultarSesion(id))
 ipcMain.on('probar-alerta', probarAlerta)
 ipcMain.on('ocultar', () => ventana?.hide())
 // La interfaz mide cuánto ocupa su contenido completo; la ventana toma ese alto hasta el tope.

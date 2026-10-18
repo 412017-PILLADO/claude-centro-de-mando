@@ -169,9 +169,15 @@ function pintarTickets(tickets, ahora) {
 
 // --- sesiones --------------------------------------------------------------
 
-function textoEstado(sesion) {
-  if (sesion.sinSenal) return 'sin señal'
-  return sesion.status === 'working' ? 'trabajando' : 'te espera'
+// Una sesión que terminó hace rato no "te espera": quedó abierta.
+const INACTIVA_MS = 10 * 60_000
+
+function estadoSesion(sesion, ahora) {
+  if (sesion.sinSenal) return { clase: '', texto: 'sin señal' }
+  if (sesion.status === 'working') return { clase: 'working', texto: 'trabajando' }
+  const ultima = sesion.lastActivityAt || sesion.startedAt || 0
+  if (ultima && ahora - ultima > INACTIVA_MS) return { clase: '', texto: `inactiva · ${hace(ahora - ultima)}` }
+  return { clase: 'waiting', texto: 'te espera' }
 }
 
 function filaSesion(sesion, ahora) {
@@ -179,6 +185,7 @@ function filaSesion(sesion, ahora) {
   const porcentaje = uso?.percent ?? null
   const nivel = porcentaje === null ? '' : porcentaje >= 85 ? 'alto' : porcentaje >= 60 ? 'medio' : ''
   const corriendo = (sesion.agents ?? []).filter(a => a.endedAt === null)
+  const estado = estadoSesion(sesion, ahora)
 
   return el(
     'div',
@@ -186,7 +193,7 @@ function filaSesion(sesion, ahora) {
     el(
       'div',
       { class: 'fila' },
-      el('span', { class: `punto ${sesion.sinSenal ? '' : sesion.status}`, title: textoEstado(sesion) }),
+      el('span', { class: `punto ${estado.clase}`, title: estado.texto }),
       el(
         'span',
         { class: 'crece', title: sesion.cwd },
@@ -194,7 +201,16 @@ function filaSesion(sesion, ahora) {
         sesion.branch ? el('span', { class: 'tenue', text: `  ⎇ ${sesion.branch}` }) : null,
         sesion.changed > 0 ? el('span', { class: 'aviso', text: `  ✎${sesion.changed}` }) : null,
       ),
-      el('span', { class: 'tenue', text: textoEstado(sesion) }),
+      el('span', { class: 'tenue', text: estado.texto }),
+      el(
+        'button',
+        {
+          class: 'quitar',
+          title: 'Quitar de la lista (vuelve sola si la usás de nuevo)',
+          onclick: () => api.ocultarSesion(sesion.id),
+        },
+        '✕',
+      ),
     ),
     porcentaje === null
       ? null
@@ -203,7 +219,6 @@ function filaSesion(sesion, ahora) {
           { class: 'contexto' },
           el('span', { text: `${Math.round(porcentaje)}%` }),
           el('div', { class: `mini-barra ${nivel}` }, el('div', { style: `width:${Math.min(100, porcentaje)}%` })),
-          uso.costUsd != null ? el('span', { text: `US$ ${uso.costUsd.toFixed(2)}` }) : null,
         ),
     corriendo.map(a =>
       el('div', { class: 'agente crece' }, el('b', { text: `● ${a.type}` }), ` ${a.description} · ${Math.round((ahora - a.startedAt) / 1000)}s`),

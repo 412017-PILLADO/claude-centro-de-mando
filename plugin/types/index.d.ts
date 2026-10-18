@@ -17,7 +17,6 @@ export type Usage = {
   percent: number | null
   tokens: number | null
   window: number
-  costUsd: number | null
   limits: { kind: string; percentUsed: number }[]
 }
 

@@ -65,6 +65,7 @@ Claude Code (cada sesión)                       Ventana flotante
 | Abrir un ticket en Jira | Clic en el ticket |
 | Trabajar un ticket con Claude Desktop | Botón ✳ del ticket (copia el pedido: pegalo con `Ctrl+V`) |
 | Entrar a una reunión | **Unirse** (en la lista, en el banner o en la notificación) |
+| Sacar una sesión de la lista | ✕ al pasar el mouse por la sesión (vuelve sola si la usás de nuevo) |
 | Probar la alerta de reunión | **Probar alerta**, en la sección Reuniones |
 | Cambiar el tamaño | Arrastrá la rayita de abajo (alto) o el borde izquierdo (ancho). Doble clic: tamaño automático |
 | Plegar una sección / el panel | Clic en su título / flecha ⌄ de la barra |

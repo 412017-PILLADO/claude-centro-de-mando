@@ -646,3 +646,24 @@ body.con-alerta .barra {
 body.plegado .agarre-alto {
   display: none;
 }
+
+/* Quitar una sesión de la lista: aparece al pasar el mouse. */
+.quitar {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  color: var(--muy-tenue);
+  font-size: 11px;
+  line-height: 1;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.sesion:hover .quitar {
+  opacity: 1;
+}
+
+.quitar:hover {
+  color: var(--texto);
+  background: var(--vidrio-tarjeta-hover);
+}
