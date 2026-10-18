@@ -7,9 +7,13 @@
   "scripts": {
     "start": "electron .",
     "acceso-directo": "node scripts/acceso-directo.js",
-    "postinstall": "node node_modules/electron/install.js && node scripts/acceso-directo.js"
+    "postinstall": "node scripts/descargar-electron.js && node scripts/acceso-directo.js",
+    "descargar-electron": "node scripts/descargar-electron.js"
   },
   "devDependencies": {
     "electron": "44.5.0"
+  },
+  "engines": {
+    "node": ">=14"
   }
 }

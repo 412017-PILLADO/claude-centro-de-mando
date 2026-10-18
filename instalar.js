@@ -15,7 +15,7 @@ const enWindows = process.platform === 'win32'
 
 function correr(comando, args, opciones = {}) {
   const resultado = spawnSync(comando, args, { encoding: 'utf8', shell: enWindows, ...opciones })
-  return { ok: resultado.status === 0, salida: `${resultado.stdout ?? ''}${resultado.stderr ?? ''}`.trim() }
+  return { ok: resultado.status === 0, salida: ((resultado.stdout || '') + (resultado.stderr || '')).trim() }
 }
 
 function paso(titulo) {
@@ -31,7 +31,7 @@ function fallar(mensaje) {
 
 paso('Revisando requisitos')
 const versionNode = Number(process.versions.node.split('.')[0])
-if (versionNode < 18) fallar(`Hace falta Node 18 o más nuevo (tenés ${process.versions.node}).`)
+if (versionNode < 14) fallar(`Hace falta Node 14 o más nuevo para instalar (tenés ${process.versions.node}). La app después usa su propio Node.`)
 if (!correr('claude', ['--version']).ok) fallar('No encontré Claude Code ("claude" en la terminal). Instalalo primero: https://code.claude.com')
 console.log(`  Node ${process.versions.node} y Claude Code: ok`)
 
@@ -63,7 +63,7 @@ console.log(`  ${instalado ? 'Actualizado' : 'Instalado'} desde ${fuente}`)
 // --- ventana -----------------------------------------------------------------
 
 paso('Instalando la ventana flotante (puede tardar un minuto: descarga Electron)')
-const npm = correr('npm', ['install', '--no-fund', '--no-audit'], { cwd: VENTANA, stdio: 'inherit' })
+const npm = correr('npm', ['install', '--no-fund', '--no-audit', '--loglevel=error'], { cwd: VENTANA, stdio: 'inherit' })
 if (!npm.ok) fallar('Falló "npm install" en la carpeta ventana.')
 
 paso('Abriendo la ventana')

@@ -21,7 +21,7 @@ Claude lee las [instrucciones de abajo](#instrucciones-para-claude) y hace todo.
 
 ### A mano
 
-Requisitos: **Windows**, **Node 18+**, **Git** y **Claude Code**.
+Requisitos: **Windows**, **Node 14 o más nuevo** (sirve el Node viejo del trabajo: solo se usa para instalar, la app trae el suyo), **Git** y **Claude Code**.
 
 ```bash
 git clone https://github.com/412017-PILLADO/claude-centro-de-mando.git
@@ -70,6 +70,16 @@ Claude Code (cada sesión)                       Ventana flotante
 | Plegar una sección / el panel | Clic en su título / flecha ⌄ de la barra |
 | Iniciar con Windows | Clic derecho en el gatito de la bandeja |
 
+## Si la descarga de Electron falla
+
+El instalador baja Electron (~110 MB) de GitHub y verifica su firma. Si la red de la empresa lo bloquea, se puede usar un espejo interno:
+
+```bash
+set ELECTRON_MIRROR=https://espejo.interno/electron/
+```
+
+y volver a correr `node instalar.js`.
+
 ## Desarrollo
 
 ```bash
@@ -90,7 +100,7 @@ cd ventana && npm start
 
 Si te piden instalar este repo, seguí estos pasos en orden y contale al usuario el resultado de cada uno:
 
-1. **Requisitos.** Verificá que sea Windows y que `node --version` sea 18 o más, y que `git` y `claude` estén instalados. Si falta algo, decile al usuario qué instalar y frená.
+1. **Requisitos.** Verificá que sea Windows y que `node --version` sea 14 o más (no le pidas al usuario que actualice Node: la app usa el Node que trae Electron), y que `git` y `claude` estén instalados. Si falta algo, decile al usuario qué instalar y frená.
 2. **Clonar.** Cloná el repo en `%USERPROFILE%\claude-plugins\claude-centro-de-mando` (creá la carpeta si no existe). Si ya existe y es este repo, hacé `git pull` en vez de clonar.
 3. **Instalar.** Corré `node instalar.js` dentro del repo. Tarda alrededor de un minuto porque descarga Electron. No sigas si termina con ✗: mostrale el error al usuario.
 4. **Conectores.** Revisá si en tu sesión hay herramientas de Jira (`searchJiraIssuesUsingJql`) y de Google Calendar (`list_events`). Si falta alguna, pedile al usuario que la conecte en claude.ai → Settings → Connectors con su cuenta del trabajo. No le pidas tokens ni contraseñas: no hacen falta.
