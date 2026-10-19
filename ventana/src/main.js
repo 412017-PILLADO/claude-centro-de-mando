@@ -418,6 +418,13 @@ ipcMain.on('pedir-estado', enviarEstado)
 ipcMain.on('trabajar-ticket', (_e, ticket) => trabajarTicketEnClaude(ticket))
 ipcMain.on('abrir-url', (_e, url) => typeof url === 'string' && url.startsWith('https://') && shell.openExternal(url))
 ipcMain.on('unirse', (_e, url) => unirse(url))
+// Dónde está el mouse, relativo a la franja del gatito (para que lo persiga de vez en cuando).
+ipcMain.handle('posicion-mouse', evento => {
+  if (!mascota || evento.sender !== mascota.webContents) return null
+  const cursor = screen.getCursorScreenPoint()
+  const zona = mascota.getBounds()
+  return { x: cursor.x - zona.x, y: cursor.y - zona.y }
+})
 // Solo la página de la mascota decide cuándo la franja deja de dejar pasar los clics.
 ipcMain.on('mascota-interactiva', (evento, si) => {
   if (mascota && evento.sender === mascota.webContents) mascota.setIgnoreMouseEvents(!si, { forward: true })

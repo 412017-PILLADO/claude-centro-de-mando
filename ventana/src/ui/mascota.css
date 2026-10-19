@@ -49,12 +49,12 @@ body {
   }
 }
 
-/* Brinco al abrir el centro de mando (acompaña la secuencia salto1 → salto2 → salto3). */
-.gato.brinco {
-  animation: brinco 0.8s ease-out;
+/* Zarpazo al cazar el mouse (acompaña la secuencia salto1 → salto2 → salto3). */
+.gato.zarpazo {
+  animation: zarpazo 0.8s ease-out;
 }
 
-@keyframes brinco {
+@keyframes zarpazo {
   0%,
   20% {
     transform: translateY(0);

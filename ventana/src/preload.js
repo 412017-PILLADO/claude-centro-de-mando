@@ -20,4 +20,5 @@ contextBridge.exposeInMainWorld('centro', {
   alRecibirCentroVisible: callback => ipcRenderer.on('centro-visible', (_event, visible) => callback(visible)),
   alRecibirPedidoPosicion: callback => ipcRenderer.on('pedir-posicion', () => callback()),
   alRecibirDecir: callback => ipcRenderer.on('decir', (_event, mensaje) => callback(mensaje)),
+  posicionMouse: () => ipcRenderer.invoke('posicion-mouse'),
 })

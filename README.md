@@ -7,7 +7,7 @@ Son dos piezas que trabajan juntas:
 | Pieza | Qué es | Qué muestra |
 | --- | --- | --- |
 | **Plugin** (`plugin/`) | Un plugin de Claude Code. Corre dentro de cada sesión. | Un panel *Centro de mando* en Claude, una línea de estado (carpeta · rama · cambios · % de contexto) y el comando `/centro`. |
-| **Gatito** (`ventana/`) | Una mascota pixel art que pasea por la barra de tareas (app de escritorio en Electron). | **Todas las alertas, como globos que dice el gatito**: sesión que terminó, reunión en 5 minutos (con **Unirse**), avisos. Cada globo se cierra con su ✕. Corre si Claude trabaja, salta cuando termina, se duerme sin actividad. |
+| **Gatito** (`ventana/`) | Una mascota pixel art que pasea por la barra de tareas (app de escritorio en Electron). | **Todas las alertas, como globos que dice el gatito**: sesión que terminó, reunión en 5 minutos (con **Unirse**), avisos. Cada globo se cierra con su ✕. Corre si Claude trabaja, salta cuando termina, se duerme sin actividad y de vez en cuando persigue el mouse. |
 | **Centro de mando** (`ventana/`) | Un panel que se abre **tocando al gatito**, a su lado. | Reuniones, tickets de Jira por estado y el estado de todas tus sesiones de Claude. |
 
 ## Instalación
@@ -62,7 +62,7 @@ Claude Code (cada sesión)                       Ventana flotante
 
 | Acción | Cómo |
 | --- | --- |
-| Abrir / cerrar el centro de mando | **Tocá al gatito** (también `Ctrl+Alt+Espacio` o clic en el ícono de la bandeja). Para cerrar: tocalo de nuevo, ✕ o `Esc` |
+| Abrir / cerrar el centro de mando | **Tocá al gatito** (también `Ctrl+Alt+Espacio` o clic en el ícono de la bandeja). Para cerrar: tocalo de nuevo o `Esc` |
 | Cerrar una alerta | La ✕ del globo (no vuelve, salvo que pase algo nuevo) |
 | Entrar a una reunión | **Unirse** en el globo del gatito o en la lista de reuniones |
 | Mover al gatito | Arrastralo |

@@ -40,11 +40,6 @@ body {
   max-height: 100vh;
 }
 
-.barra,
-.alerta {
-  flex: none;
-}
-
 svg {
   width: 16px;
   height: 16px;
@@ -63,96 +58,6 @@ button {
   border: none;
   cursor: pointer;
   -webkit-app-region: no-drag;
-}
-
-/* --- barra ------------------------------------------------------------ */
-
-.barra {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  height: 44px;
-  padding: 0 8px 0 12px;
-  background: var(--vidrio);
-  border: 1px solid var(--borde);
-  border-radius: 12px;
-  box-shadow: 0 6px 20px rgba(2, 6, 23, 0.45);
-}
-
-/* Gatito: pixel art nítido; pestañea cada 5 s y se mueve cuando Claude está trabajando. */
-.gato {
-  width: 22px;
-  height: 22px;
-  flex: none;
-  stroke: none;
-  image-rendering: pixelated;
-}
-
-.gato .ojo {
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: pestaneo 5s infinite;
-}
-
-@keyframes pestaneo {
-  0%, 94%, 100% {
-    transform: scaleY(1);
-  }
-  97% {
-    transform: scaleY(0.1);
-  }
-}
-
-body.trabajando .gato {
-  animation: saltito 0.9s ease-in-out infinite;
-}
-
-@keyframes saltito {
-  50% {
-    transform: translateY(-2px);
-  }
-}
-
-.titulo {
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.separador {
-  color: var(--muy-tenue);
-  font-size: 10px;
-}
-
-.resumen {
-  flex: 1;
-  min-width: 0;
-  color: var(--tenue);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.boton-icono {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  color: var(--tenue);
-}
-
-.boton-icono:hover {
-  background: var(--vidrio-tarjeta-hover);
-  color: var(--texto);
-}
-
-#btn-desplegar svg {
-  transition: transform 0.15s;
-}
-
-body.plegado #btn-desplegar svg {
-  transform: rotate(-90deg);
 }
 
 /* --- panel desplegable ------------------------------------------------ */
@@ -596,9 +501,6 @@ body.plegado .panel {
   font-size: 11px;
 }
 
-body.con-alerta .barra {
-  border-color: color-mix(in srgb, var(--acento) 55%, transparent);
-}
 
 @keyframes entrar {
   from {

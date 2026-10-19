@@ -34,7 +34,6 @@ const ZANCADAS = ['correr1', 'correr2', 'correr3', 'correr4']
 const HABLAR = [['maullar2', 220], ['maullar1', 160], ['maullar2', 220], ['maullar1', 160], ['maullar2', 220], ['maullar1', 300]]
 const SALUDAR = [['saludar1', 380], ['saludar2', 380], ['saludar1', 380], ['saludar2', 380], ['saludar1', 380], ['saludar2', 380]]
 const LAMERSE = [['lamer1', 360], ['lamer2', 360], ['lamer1', 360], ['lamer2', 360], ['lamer1', 360], ['lamer2', 360], ['lamer3', 900]]
-const SALTO = [['salto1', 160], ['salto2', 420], ['salto3', 220]]
 const BOSTEZO = [['bostezo1', 300], ['bostezo2', 950], ['bostezo3', 650], ['sueno', 1400]]
 const duracion = secuencia => secuencia.reduce((total, [, ms]) => total + ms, 0)
 
@@ -125,18 +124,22 @@ function maullar() {
   try {
     audio = audio || new AudioContext()
     const ahora = audio.currentTime
+    // Un "mrrp" bajito: onda suave, tono medio, filtro que saca los agudos y volumen muy bajo.
     const oscilador = audio.createOscillator()
+    const filtro = audio.createBiquadFilter()
     const volumen = audio.createGain()
-    oscilador.type = 'triangle'
-    oscilador.frequency.setValueAtTime(620, ahora)
-    oscilador.frequency.linearRampToValueAtTime(980, ahora + 0.12)
-    oscilador.frequency.linearRampToValueAtTime(560, ahora + 0.38)
+    oscilador.type = 'sine'
+    oscilador.frequency.setValueAtTime(500, ahora)
+    oscilador.frequency.linearRampToValueAtTime(680, ahora + 0.1)
+    oscilador.frequency.linearRampToValueAtTime(460, ahora + 0.28)
+    filtro.type = 'lowpass'
+    filtro.frequency.value = 1200
     volumen.gain.setValueAtTime(0.0001, ahora)
-    volumen.gain.exponentialRampToValueAtTime(0.1, ahora + 0.04)
-    volumen.gain.exponentialRampToValueAtTime(0.0001, ahora + 0.42)
-    oscilador.connect(volumen).connect(audio.destination)
+    volumen.gain.exponentialRampToValueAtTime(0.025, ahora + 0.06)
+    volumen.gain.exponentialRampToValueAtTime(0.0001, ahora + 0.32)
+    oscilador.connect(filtro).connect(volumen).connect(audio.destination)
     oscilador.start(ahora)
-    oscilador.stop(ahora + 0.45)
+    oscilador.stop(ahora + 0.35)
   } catch {
     // sin audio
   }
@@ -273,6 +276,7 @@ function elegirAccion(ahora, anterior) {
     return { tipo: 'dormir', desde: ahora, hasta: ahora + azar(15000, 40000), dibujo: alguno(['durmiendo', 'bolita']) }
   }
   if (dado < ganasDeDormir + 0.1) return secuencia(LAMERSE) // se acicala
+  if (modo === 'tranqui' && dado < ganasDeDormir + 0.18) return { tipo: 'perseguir', hasta: ahora + azar(6000, 10000) } // caza el mouse
   if (dado < ganasDeDormir + 0.4) {
     return { tipo: 'sentado', dibujo: alguno(['sentado', 'sentado', 'atento', 'cola', 'contento']), hasta: ahora + azar(3000, 9000) }
   }
@@ -285,12 +289,52 @@ function hablar() {
   accion = secuencia(HABLAR)
 }
 
-// Salto al abrir el centro de mando.
-function brincar() {
-  accion = secuencia(SALTO)
-  $('gato').classList.remove('brinco')
-  void $('gato').offsetWidth // reinicia la animación
-  $('gato').classList.add('brinco')
+// --- cazar el mouse --------------------------------------------------------------
+// De vez en cuando persigue el cursor por la barra; cuando lo alcanza, se agacha y le salta encima.
+
+const ZARPAZO = [['salto1', 380], ['salto2', 360], ['salto3', 260]]
+let mouse = null
+let pidiendoMouse = false
+
+function actualizarMouse() {
+  if (pidiendoMouse) return
+  pidiendoMouse = true
+  api
+    .posicionMouse()
+    .then(posicion => {
+      mouse = posicion
+    })
+    .catch(() => {})
+    .finally(() => {
+      pidiendoMouse = false
+    })
+}
+
+function perseguir(ahora, dt) {
+  if (ahora - (accion.ultimaConsulta || 0) > 120) {
+    accion.ultimaConsulta = ahora
+    actualizarMouse()
+  }
+  if (!mouse) return mostrarCuadro('atento')
+  const objetivo = limite(mouse.x - ANCHO_GATO / 2)
+  const distancia = objetivo - x
+  if (Math.abs(distancia) < 24) {
+    // Lo alcanzó: zarpazo y sigue persiguiendo (si queda tiempo).
+    const resto = accion.hasta
+    accion = secuencia(ZARPAZO, resto - ahora > 2500 ? { tipo: 'perseguir', hasta: resto } : null)
+    $('gato').classList.remove('zarpazo')
+    void $('gato').offsetWidth // reinicia la animación
+    $('gato').classList.add('zarpazo')
+    return
+  }
+  const lejos = Math.abs(distancia) > 220
+  direccion = distancia > 0 ? 1 : -1
+  x += direccion * Math.min(Math.abs(distancia), (lejos ? 190 : 110) * dt)
+  if (ahora - ultimoCuadro > (lejos ? 85 : 120)) {
+    paso = (paso + 1) % PASOS.length
+    ultimoCuadro = ahora
+  }
+  mostrarCuadro((lejos ? ZANCADAS : PASOS)[paso])
 }
 
 function celebrar() {
@@ -339,6 +383,8 @@ function cuadro(ahora) {
     } else if (accion.tipo === 'dormir') {
       // Bosteza, le da sueño y después se duerme del todo.
       mostrarCuadro(cuadroDeSecuencia(BOSTEZO, ahora - accion.desde) || accion.dibujo)
+    } else if (accion.tipo === 'perseguir') {
+      perseguir(ahora, dt)
     } else if (accion.tipo === 'secuencia') {
       mostrarCuadro(cuadroDeSecuencia(accion.cuadros, ahora - accion.desde) || accion.cuadros[accion.cuadros.length - 1][0])
     } else if (accion.tipo === 'saltar') {
@@ -368,11 +414,9 @@ addEventListener('resize', () => {
 const centroDelGato = () => Math.round(x + ANCHO_GATO / 2)
 
 api.alRecibirCentroVisible(({ visible, lado }) => {
-  const seAbrio = visible && !centroAbierto
   centroAbierto = visible
   ladoDelCentro = lado === 'derecha' ? 'derecha' : 'izquierda'
-  if (seAbrio) brincar() // salta al abrirlo y después se queda mirando el panel
-  else accion = null
+  accion = null // abierto: se sienta mirando el panel; cerrado: vuelve a lo suyo
 })
 
 // La bandeja o el atajo preguntan dónde está el gatito para abrir el centro a su lado.
@@ -418,7 +462,7 @@ addEventListener('mouseup', evento => {
   if (fueClic) {
     // Tocarlo abre (o cierra) el centro de mando a su lado.
     maullar()
-    accion = secuencia([['maullar2', 300], ['maullar1', 200]]) // si el centro se abre, enseguida salta
+    accion = null // el centro le avisa si se abrió o se cerró, y ahí elige qué hacer
     api.alternarCentro(centroDelGato())
   } else {
     accion = { tipo: 'sentado', dibujo: 'sentado', hasta: performance.now() + 2500 }

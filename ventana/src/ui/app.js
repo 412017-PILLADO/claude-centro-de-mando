@@ -62,7 +62,6 @@ function hace(ms) {
 const miles = n => (n >= 1000 ? `${Math.round(n / 1000)}k` : String(n))
 const esSuelta = cwd => /[\\/]scratch-workspaces[\\/]|^[a-z]:[\\/]windows([\\/]|$)/i.test(cwd ?? '')
 const nombreSesion = s => (esSuelta(s.cwd) ? 'Conversación suelta' : s.name)
-const plural = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`
 
 // --- tickets ---------------------------------------------------------------
 
@@ -234,30 +233,6 @@ function pintarSesiones(sesiones, ahora) {
   for (const sesion of sesiones) caja.append(filaSesion(sesion, ahora))
 }
 
-// --- gatito ----------------------------------------------------------------
-
-// Dibuja el gatito pixel por pixel; los ojos llevan la clase "ojo" para pestañear con CSS.
-function dibujarGato() {
-  const { PIXELES, COLORES } = window.GATO
-  const svg = $('gato')
-  const ns = 'http://www.w3.org/2000/svg'
-  PIXELES.forEach((fila, y) =>
-    [...fila].forEach((letra, x) => {
-      if (!COLORES[letra]) return
-      const pixel = document.createElementNS(ns, 'rect')
-      pixel.setAttribute('x', x)
-      pixel.setAttribute('y', y)
-      pixel.setAttribute('width', 1)
-      pixel.setAttribute('height', 1)
-      pixel.setAttribute('fill', COLORES[letra])
-      if (letra === 'e') pixel.setAttribute('class', 'ojo')
-      svg.append(pixel)
-    }),
-  )
-}
-
-dibujarGato()
-
 // --- reuniones -------------------------------------------------------------
 
 const AVISO_ANTES_MS = 5 * 60_000
@@ -315,22 +290,6 @@ $('btn-probar').addEventListener('click', evento => {
   api.probarAlerta()
 })
 
-// --- barra -----------------------------------------------------------------
-
-function pintarBarra({ sesiones, tickets, reuniones, ahora }) {
-  const vivas = sesiones.filter(s => !s.sinSenal)
-  const esperando = vivas.filter(s => s.status === 'waiting').length
-  const trabajando = vivas.filter(s => s.status === 'working').length
-  const partes = []
-  const proxima = reuniones.find(r => Date.parse(r.start) - ahora < 60 * 60_000)
-  if (proxima) partes.push(`${proxima.title.split(/[\s/]/)[0]} ${cuando(proxima, ahora)}`)
-  if (tickets) partes.push(plural(tickets.items.length, 'ticket', 'tickets'))
-  partes.push(plural(sesiones.length, 'sesión', 'sesiones'))
-  $('resumen').textContent = partes.join(' · ')
-  $('resumen').title = `${trabajando} trabajando · ${esperando} esperándote`
-  document.body.classList.toggle('trabajando', trabajando > 0)
-}
-
 // --- secciones plegables y alto de la ventana -----------------------------
 
 for (const seccion of document.querySelectorAll('.seccion')) {
@@ -342,7 +301,7 @@ for (const seccion of document.querySelectorAll('.seccion')) {
   })
 }
 
-$('btn-ocultar').onclick = () => api.ocultar()
+// Se cierra tocando al gatito o con Esc.
 addEventListener('keydown', evento => {
   if (evento.key === 'Escape') api.ocultar()
 })
@@ -385,7 +344,6 @@ let ultimo = null
 function pintar() {
   if (!ultimo) return
   const { ahora, sesiones, tickets, reuniones } = ultimo
-  pintarBarra(ultimo)
   pintarReuniones(reuniones, ahora)
   pintarTickets(tickets, ahora)
   pintarSesiones(sesiones, ahora)
