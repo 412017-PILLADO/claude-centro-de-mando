@@ -88,12 +88,13 @@ y volver a correr `node instalar.js`.
 
 ## Cambiar el gatito
 
-Los 35 dibujos salen de dos hojas con fondo transparente, en `ventana/arte/`. Cada gatito se detecta solo (no hace falta una grilla pareja); las hojas se leen por filas, de izquierda a derecha, con el gato mirando a la derecha:
+Los 41 dibujos salen de tres hojas con fondo transparente, en `ventana/arte/`. Cada gatito se detecta solo (no hace falta una grilla pareja); las hojas se leen por filas, de izquierda a derecha, con el gato mirando a la derecha:
 
 | Hoja | Filas |
 | --- | --- |
 | `gatito-hoja.webp` | sentado · contento · atento · cola / caminar 1-4 / alerta (!) · tablet · listo (✓) · duda (?) / sueño · durmiendo (zZz) · bolita · estirarse |
 | `gatito-hoja-2.webp` | maullar 1-2 · saludar 1-2 / correr 1-4 / lamerse 1-3 / bostezo 1-3 / salto 1-3 / espaldas 1-2 |
+| `gatito-hoja-3.webp` | mirar arriba 1-2 · agazapado 1-2 (el segundo se espeja al cortar) · zarpazo con la pata 1-2 |
 
 Para cambiar el gatito, reemplazá las hojas (o sumá otra en `HOJAS`, dentro de `ventana/scripts/cortar-hoja.js`) y corré:
 

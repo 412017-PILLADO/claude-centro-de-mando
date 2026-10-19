@@ -40,6 +40,14 @@ const HOJAS = [
     // En la hoja, los de espaldas están dibujados más chicos: se igualan en alto a uno sentado.
     igualarAlto: { espaldas1: 'maullar1', espaldas2: 'maullar1' },
   },
+  {
+    archivo: 'arte/gatito-hoja-3.webp',
+    filas: [6],
+    nombres: ['mirar1', 'mirar2', 'agazapado1', 'agazapado2', 'pata1', 'pata2'],
+    escalarComo: { propio: 'mirar1', referencia: 'sentado' },
+    // En la hoja, el segundo agazapado mira a la izquierda: se espeja para que mire a la derecha como el resto.
+    espejar: ['agazapado2'],
+  },
 ]
 
 // Se ejecuta en la página: devuelve las cajas de cada dibujo (en pixeles de la hoja).
@@ -113,11 +121,12 @@ function detectar(src, filasEsperadas) {
     img.src = src
   })
 }
-// Dibuja una caja de la hoja cargada, escalada, apoyada abajo y centrada en un lienzo común.
-function exportar(caja, escala, anchoFinal, altoFinal) {
+// Dibuja una caja de la hoja cargada, escalada, apoyada abajo y centrada en un lienzo común (espejada si se pide).
+function exportar(caja, escala, anchoFinal, altoFinal, espejo) {
   const [x, y, w, h] = caja
   const r = document.createElement('canvas'); r.width = anchoFinal; r.height = altoFinal
   const ctx = r.getContext('2d'); ctx.imageSmoothingQuality = 'high'
+  if (espejo) { ctx.translate(anchoFinal, 0); ctx.scale(-1, 1) }
   const ew = Math.round(w * escala), eh = Math.round(h * escala)
   ctx.drawImage(window.__hoja, x, y, w, h, Math.floor((anchoFinal - ew) / 2), altoFinal - eh, ew, eh)
   return r.toDataURL('image/png').split(',')[1]
@@ -163,7 +172,8 @@ app.whenReady().then(async () => {
   for (const d of detectadas) {
     await js(`detectar(${JSON.stringify(d.src)}, ${JSON.stringify(d.hoja.filas)})`) // carga esta hoja en la página
     for (let i = 0; i < d.cajas.length; i++) {
-      const b64 = await js(`exportar(${JSON.stringify(d.cajas[i])}, ${d.escalas[i]}, ${anchoFinal}, ${altoFinal})`)
+      const espejo = (d.hoja.espejar || []).includes(d.hoja.nombres[i])
+      const b64 = await js(`exportar(${JSON.stringify(d.cajas[i])}, ${d.escalas[i]}, ${anchoFinal}, ${altoFinal}, ${espejo})`)
       fs.writeFileSync(path.join(SALIDA, `${d.hoja.nombres[i]}.png`), Buffer.from(b64, 'base64'))
     }
   }

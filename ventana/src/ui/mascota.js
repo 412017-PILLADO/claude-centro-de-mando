@@ -25,7 +25,7 @@ const DIBUJOS = [
   'alerta', 'tablet', 'listo', 'duda', 'sueno', 'durmiendo', 'bolita', 'estirarse',
   'maullar1', 'maullar2', 'saludar1', 'saludar2', 'correr1', 'correr2', 'correr3', 'correr4',
   'lamer1', 'lamer2', 'lamer3', 'bostezo1', 'bostezo2', 'bostezo3', 'salto1', 'salto2', 'salto3',
-  'espaldas1', 'espaldas2',
+  'espaldas1', 'espaldas2', 'mirar1', 'mirar2', 'agazapado1', 'agazapado2', 'pata1', 'pata2',
 ]
 const PASOS = ['caminar1', 'caminar2', 'caminar3', 'caminar4']
 const ZANCADAS = ['correr1', 'correr2', 'correr3', 'correr4']
@@ -290,9 +290,18 @@ function hablar() {
 }
 
 // --- cazar el mouse --------------------------------------------------------------
-// De vez en cuando persigue el cursor por la barra; cuando lo alcanza, se agacha y le salta encima.
+// De vez en cuando persigue el cursor por la barra. Cuando lo alcanza, depende de la altura del cursor:
+//   · muy arriba (fuera de su alcance) → se sienta y lo mira desde abajo;
+//   · un poco arriba                   → le tira zarpazos con la pata;
+//   · a su altura                      → se agazapa moviendo la cola y le salta encima.
 
-const ZARPAZO = [['salto1', 380], ['salto2', 360], ['salto3', 260]]
+const AGAZAPARSE = [['agazapado1', 200], ['agazapado2', 200], ['agazapado1', 200], ['agazapado2', 200], ['agazapado1', 260]]
+const ZARPAZO = [...AGAZAPARSE, ['salto1', 200], ['salto2', 360], ['salto3', 260]]
+const MIRAR_ARRIBA = [['mirar1', 700], ['mirar2', 500], ['mirar1', 700], ['mirar2', 500]]
+const PATA = [['pata1', 200], ['pata2', 200], ['pata1', 200], ['pata2', 200], ['pata1', 200], ['pata2', 260]]
+// Alturas dentro de la franja (0 = arriba de todo; el gatito vive en la parte de abajo).
+const ALTO_ALCANCE = 230 // por debajo de esto, el cursor está "a su altura"
+const ALTO_PATA = 100 // entre esto y ALTO_ALCANCE, lo alcanza con la pata
 let mouse = null
 let pidiendoMouse = false
 
@@ -319,12 +328,22 @@ function perseguir(ahora, dt) {
   const objetivo = limite(mouse.x - ANCHO_GATO / 2)
   const distancia = objetivo - x
   if (Math.abs(distancia) < 24) {
-    // Lo alcanzó: zarpazo y sigue persiguiendo (si queda tiempo).
+    // Lo alcanzó: según la altura del cursor lo mira, le tira la pata o le salta. Después sigue (si queda tiempo).
     const resto = accion.hasta
-    accion = secuencia(ZARPAZO, resto - ahora > 2500 ? { tipo: 'perseguir', hasta: resto } : null)
-    $('gato').classList.remove('zarpazo')
-    void $('gato').offsetWidth // reinicia la animación
-    $('gato').classList.add('zarpazo')
+    const seguir = resto - ahora > 3000 ? { tipo: 'perseguir', hasta: resto } : null
+    if (mouse.y < ALTO_PATA) {
+      accion = secuencia(MIRAR_ARRIBA, seguir)
+    } else if (mouse.y < ALTO_ALCANCE) {
+      accion = secuencia(PATA, seguir)
+    } else {
+      accion = secuencia(ZARPAZO, seguir)
+      // El brinco acompaña al salto, después de agazaparse.
+      setTimeout(() => {
+        $('gato').classList.remove('zarpazo')
+        void $('gato').offsetWidth // reinicia la animación
+        $('gato').classList.add('zarpazo')
+      }, duracion(AGAZAPARSE))
+    }
     return
   }
   const lejos = Math.abs(distancia) > 220
