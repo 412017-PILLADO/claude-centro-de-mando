@@ -1,7 +1,7 @@
 {
   "name": "centro-flotante",
-  "version": "0.2.0",
-  "description": "Ventana flotante del Centro de mando de Claude Code.",
+  "version": "0.9.0",
+  "description": "Gatito de escritorio y centro de mando (Electron, Windows y macOS).",
   "main": "src/main.js",
   "private": true,
   "scripts": {

@@ -1,7 +1,9 @@
 {
   "name": "centro-de-mando",
-  "version": "0.8.0",
-  "description": "Panel general: sesión actual, uso de contexto, tickets de Jira asignados, subagentes en vivo y proyectos recientes. Comparte su estado con la ventana flotante.",
-  "author": { "name": "Mateo Pillado" },
+  "version": "0.9.0",
+  "description": "Comparte con el gatito de escritorio el estado de cada sesión y trae reuniones y tickets con tus conectores de Claude (los que actives en sus Ajustes). Suma el panel /centro y una línea de estado.",
+  "author": {
+    "name": "Mateo Pillado"
+  },
   "types": "./types/index.d.ts"
 }

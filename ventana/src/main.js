@@ -160,7 +160,7 @@ function unirse(url) {
 }
 
 // Las alertas las da el gatito (globos sobre su cabeza). Si el gatito está apagado,
-// se usan las notificaciones de Windows.
+// se usan las notificaciones del sistema.
 const hayGatito = () => Boolean(mascota && !mascota.isDestroyed())
 
 function alertarReunion(reunion, minutos) {
@@ -214,7 +214,7 @@ function avisar(titulo, cuerpo) {
   aviso.show()
 }
 
-// Sin gatito, se avisa por Windows cuando una sesión termina (el gatito lo hace solo).
+// Sin gatito, se avisa con una notificación del sistema cuando una sesión termina (el gatito lo hace solo).
 function avisarCambios(sesiones) {
   const silencio = enReunion(Date.now()) || hayGatito() // en una reunión no se avisa de Claude
   for (const sesion of sesiones) {
@@ -450,7 +450,7 @@ function crearVentana() {
   ventana.webContents.on('will-navigate', evento => evento.preventDefault())
 }
 
-// --- bandeja e inicio con Windows ---------------------------------------
+// --- bandeja ---------------------------------------------------------------
 
 
 function menuBandeja() {

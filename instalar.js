@@ -33,11 +33,11 @@ function fallar(mensaje) {
 // --- requisitos ------------------------------------------------------------
 
 paso('Revisando requisitos')
-const versionNode = Number(process.versions.node.split('.')[0])
 if (!enWindows && !enMac) fallar('Por ahora el gatito funciona en Windows y macOS.')
 // En Windows la descarga de Electron es propia y anda con Node 14; en macOS usa el instalador de Electron, que pide Node 22.
-const nodeMinimo = enWindows ? 14 : 22
-if (versionNode < nodeMinimo) fallar(`Hace falta Node ${nodeMinimo} o más nuevo para instalar (tenés ${process.versions.node}). La app después usa su propio Node.`)
+const [mayor, menor] = process.versions.node.split('.').map(Number)
+const nodeMinimo = enWindows ? '14' : '22.12'
+if (enWindows ? mayor < 14 : mayor < 22 || (mayor === 22 && menor < 12)) fallar(`Hace falta Node ${nodeMinimo} o más nuevo para instalar (tenés ${process.versions.node}). La app después usa su propio Node.`)
 if (!soloMascota && !correr('claude', ['--version']).ok) fallar('No encontré Claude Code ("claude" en la terminal). Instalalo (https://code.claude.com) o corré "node instalar.js --solo-mascota" para tener solo el gatito.')
 console.log(`  Node ${process.versions.node}${soloMascota ? '' : ' y Claude Code'}: ok`)
 

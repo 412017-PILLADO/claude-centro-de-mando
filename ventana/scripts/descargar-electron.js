@@ -1,12 +1,12 @@
 // Descarga el programa de Electron sin depender del Node de la PC.
 //
 // El instalador que trae Electron 44 pide Node 22.12+, y en muchos equipos se usa un
-// Node más viejo por las librerías del trabajo. Este script hace lo mismo con lo básico
+// Node más viejo por otros proyectos. Este script hace lo mismo con lo básico
 // de Node (corre desde Node 14): baja el zip oficial, verifica su SHA-256 contra la lista
 // que viene en el paquete de Electron y lo descomprime con el tar de Windows.
 // La app después usa el Node que Electron trae adentro, no el de la PC.
 //
-// ELECTRON_MIRROR cambia de dónde se baja (por ejemplo, un espejo interno de la empresa).
+// ELECTRON_MIRROR cambia de dónde se baja (por ejemplo, un espejo interno).
 'use strict'
 
 const crypto = require('crypto')
