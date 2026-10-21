@@ -43,21 +43,29 @@ function actualizar(datos, ahora = Date.now()) {
   }
 }
 
+// Lo que avanza solo (hambre, energía) se guarda como mucho cada minuto; lo que hace la persona, al instante.
+const GUARDAR_CADA_MS = 60_000
+
 function crearVida(carpeta, reloj = Date.now) {
   const archivo = path.join(carpeta, 'gatito.json')
   let datos
   try { datos = JSON.parse(fs.readFileSync(archivo, 'utf8')) } catch { datos = null }
+  let guardadoEn = -Infinity
   const guardar = () => {
     fs.mkdirSync(carpeta, { recursive: true })
     fs.writeFileSync(archivo + '.tmp', JSON.stringify(datos, null, 2) + '\n')
     fs.renameSync(archivo + '.tmp', archivo)
+    guardadoEn = reloj()
     return { ...datos }
   }
+  const guardarSiToca = () => (reloj() - guardadoEn >= GUARDAR_CADA_MS ? guardar() : { ...datos })
   datos = actualizar(datos, reloj())
   guardar()
   return {
-    leer() { datos = actualizar(datos, reloj()); return guardar() },
-    observar(contexto) {datos=actualizar(datos,reloj()); const eventosFoco=require('./foco').avanzar(datos,reloj()); const eventos=datos.foco?.fase==='foco'?eventosFoco:[...eventosFoco,...require('./rutina').observar(datos,reloj(),contexto)];guardar();return {datos:{...datos},eventos}},
+    leer() { datos = actualizar(datos, reloj()); return guardarSiToca() },
+    observar(contexto) {datos=actualizar(datos,reloj()); const eventosFoco=require('./foco').avanzar(datos,reloj()); const eventos=datos.foco?.fase==='foco'?eventosFoco:[...eventosFoco,...require('./rutina').observar(datos,reloj(),contexto)];guardarSiToca();return {datos:{...datos},eventos}},
+    // Al cerrar la app, para no perder el último minuto.
+    guardar,
     actuar(accion, valor) {
       datos = actualizar(datos, reloj())
       const ahora = reloj(), antes = {...datos}

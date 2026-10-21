@@ -23,9 +23,9 @@ const COLGAR = ['colgar1', 'colgar2', 'colgar3', 'colgar4'].map(n => [n, 180])
 const duracion = secuencia => secuencia.reduce((total, [, ms]) => total + ms, 0)
 
 const imagenes = {}
+let colorActual = 'negro'
 for (const nombre of DIBUJOS) {
   const img = document.createElement('img')
-  img.src = `sprites/${nombre}.png`
   img.alt = ''
   img.draggable = false
   img.height = ALTO_GATO
@@ -48,20 +48,23 @@ for (const nombre of DIBUJOS) {
 let cuadroActual = null
 let gatito = { color: 'negro', saciedad: 80, energia: 80, carino: 80 }
 let ajustesCentro = {}
-let versionColor = 0
-async function aplicarColor(color) {
-  const version = ++versionColor
-  await Promise.all(DIBUJOS.map(async nombre => {
-    const src = await pintarGatito(nombre, color)
-    if (version === versionColor) imagenes[nombre].src = src
-  }))
+// Cada dibujo se carga (y se recolorea) recién cuando se muestra; el recoloreado queda cacheado.
+function cargarDibujo(nombre) {
+  const img = imagenes[nombre]
+  if (img.colorCargado === colorActual) return
+  const color = img.colorCargado = colorActual
+  pintarGatito(nombre, color).then(src => { if (img.colorCargado === color) img.src = src })
+}
+function aplicarColor(color) {
+  colorActual = color
+  if (cuadroActual) cargarDibujo(cuadroActual)
 }
 function mostrarCuadro(nombre) {
   if (nombre === cuadroActual) return
+  cargarDibujo(nombre)
   if (cuadroActual) imagenes[cuadroActual].style.display = 'none'
   imagenes[nombre].style.display = 'block'
   cuadroActual = nombre
-  api.cuadroGatito(nombre)
 }
 
 // --- globos de alerta ----------------------------------------------------------
@@ -315,7 +318,6 @@ function observarCursor(p){
  cursorX=p.x
  cursorCerca=!p.lado&&Math.hypot(p.x-centroDelGato(),p.y-(innerHeight-ALTO_GATO/2))<=RADIO_MIRADA
 }
-setInterval(async()=>observarCursor(await api.posicionMouse()),2000)
 const limite = valor => Math.max(0, Math.min(ancho - ANCHO_GATO, valor))
 // Las patitas llegan al extremo del lienzo; deja el gato entero dentro de la pantalla.
 function destinoBorde(lado){return lado==='izquierda'?0:ancho-ANCHO_GATO}
@@ -405,8 +407,7 @@ function cuadro(ahora){
  if(!salto&&ahora<maullidoHasta)mostrarCuadro(cuadroDeSecuencia(comportamientoGatito.ciclos.maullar,ahora-(maullidoHasta-400))||'maullar2')
  const comida=['croquetas','pescado','leche'].includes(accion?.estado)
  $('cuenco-pedido').hidden=enFoco()||/^empujar/.test(cuadroActual)||(!comida&&accion?.estado!=='hambre')
- $('cuenco-pedido').src='sprites/cuenco-'+(comida?'lleno':'vacio')+'.png'
- $('cuenco-pedido').alt=comida?'Cuenco lleno':'Cuenco vacío'
+ if(!$('cuenco-pedido').hidden&&$('cuenco-pedido').lleno!==comida){$('cuenco-pedido').lleno=comida;$('cuenco-pedido').src='sprites/cuenco-'+(comida?'lleno':'vacio')+'.png';$('cuenco-pedido').alt=comida?'Cuenco lleno':'Cuenco vacío'}
  const f=gatito.foco,seg=f?Math.max(0,Math.ceil((f.hasta-Date.now())/1000)):0
  $('foco-franja').hidden=!f||f.fase==='listo';$('foco-franja').textContent=f&&f.fase!=='listo'?(f.fase==='foco'?'Foco ':'Descanso ')+String(Math.floor(seg/60)).padStart(2,'0')+':'+String(seg%60).padStart(2,'0'):''
  ubicarFranjaFoco()
@@ -419,12 +420,21 @@ function cuadro(ahora){
  }
  const orientacion=accion?.estado==='girar'&&['girar1','girar2','girar3'].includes(cuadroActual)?accion.direccionInicial:direccion
  $('gato').classList.toggle('izquierda',orientacion<0)
- ubicarGlobo($('alertas'))
- $('alertas').style.setProperty('--aire-gato', (imagenes[cuadroActual]?.aireSuperior || 0) + 'px')
- for(const a of alertas.values()){const r=a.nodo.getBoundingClientRect();a.nodo.style.setProperty('--colita-x',Math.max(12,Math.min(r.width-12,centroDelGato()-r.left))+'px')}
- $('mascota').style.transform=`translateX(${Math.round(x)}px)`
+ if(alertas.size){
+  ubicarGlobo($('alertas'))
+  $('alertas').style.setProperty('--aire-gato', (imagenes[cuadroActual]?.aireSuperior || 0) + 'px')
+  for(const a of alertas.values()){const r=a.nodo.getBoundingClientRect();a.nodo.style.setProperty('--colita-x',Math.max(12,Math.min(r.width-12,centroDelGato()-r.left))+'px')}
+ }
+ const desplazo=`translateX(${Math.round(x)}px)`;if($('mascota').style.transform!==desplazo)$('mascota').style.transform=desplazo
  const centro=centroDelGato();if(centro!==ultimoCentro){ultimoCentro=centro;api.posicionGatito(centro)}
- requestAnimationFrame(cuadro)
+ programarCuadro(ahora)
+}
+function enMovimiento(ahora){
+ return !!(salto||cayendo||arrastre||viaje||preparando||miradaCursor||ahora<maullidoHasta||ahora<corazonHasta||!$('menu-rapido').hidden||['caminar','correr','girar'].includes(accion?.estado))
+}
+function programarCuadro(ahora){
+ if(enMovimiento(ahora)){requestAnimationFrame(cuadro);return}
+ setTimeout(()=>requestAnimationFrame(cuadro),maquina.durmiendo()?250:100)
 }
 requestAnimationFrame(cuadro)
 addEventListener('resize',()=>{ancho=innerWidth})
@@ -486,14 +496,17 @@ api.alRecibirArrastre(({x:nuevaX,soltado,aterrizo,saltando,fase,lado,cancelado})
 api.pedirEstado()
 
 // Windows sigue informando coordenadas aun cuando la franja deja pasar los clics.
-let consultandoMouse=false
-setInterval(async()=>{
- if(consultandoMouse)return
- consultandoMouse=true
- try{const p=await api.posicionMouse();if(!p)return;observarCursor(p)
-  hacerTocable(!cayendo&&encima({clientX:p.x,clientY:p.y}))
- }finally{consultandoMouse=false}
-},50)
+// Rápido solo con el cursor sobre la franja (para volverla tocable a tiempo); lejos, unas pocas veces por segundo.
+const MOUSE_CERCA_MS=50, MOUSE_LEJOS_MS=400
+async function consultarMouse(){
+ let espera=MOUSE_LEJOS_MS
+ try{const p=await api.posicionMouse()
+  if(p){observarCursor(p)
+   hacerTocable(!cayendo&&encima({clientX:p.x,clientY:p.y}))
+   if(!p.lado&&p.y>=0&&p.y<=innerHeight)espera=MOUSE_CERCA_MS}
+ }finally{setTimeout(consultarMouse,arrastre||tocable?MOUSE_CERCA_MS:espera)}
+}
+setTimeout(consultarMouse,MOUSE_LEJOS_MS)
 function cerrarMenu(){
  $('menu-rapido').hidden=true;$('ajustes-gato').hidden=true;api.menuRapido(false)
 }

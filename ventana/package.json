@@ -6,6 +6,8 @@
   "private": true,
   "scripts": {
     "start": "electron .",
+    "test": "node scripts/probar-gatito.cjs && node scripts/verificar-interfaz.cjs",
+    "metricas": "node scripts/resumir-metricas.cjs",
     "acceso-directo": "node scripts/acceso-directo.js",
     "postinstall": "node scripts/descargar-electron.js && node scripts/acceso-directo.js",
     "descargar-electron": "node scripts/descargar-electron.js",

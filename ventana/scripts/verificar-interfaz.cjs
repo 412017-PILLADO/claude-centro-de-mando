@@ -14,7 +14,7 @@ function verificarSinVentana() {
   let tiempo=0, proximo
   const contexto = vm.createContext({window:{centro:api},document:{getElementById(id){if(!nodos.has(id))nodos.set(id,nodo());return nodos.get(id)},createElement:nodo,createTextNode:t=>t},
     innerWidth:1920,performance:{now:()=>tiempo},Date,Math,console,Promise,
-    requestAnimationFrame:fn=>{proximo=fn},setTimeout,setInterval:()=>0,addEventListener:(n,fn)=>eventos[n]=fn,
+    requestAnimationFrame:fn=>{proximo=fn},setTimeout:(fn,ms)=>{const t=setTimeout(fn,ms);t.unref?.();return t},setInterval:()=>0,addEventListener:(n,fn)=>eventos[n]=fn,
     pintarGatito:async n=>'sprites/'+n+'.png'})
   for (const archivo of ['ambiente.js','comportamiento.js','mascota.js']) vm.runInContext(fs.readFileSync(path.join(raiz,archivo),'utf8'),contexto,{filename:archivo})
   const avanzar = ms=>{tiempo+=ms;proximo(tiempo)}
@@ -27,7 +27,6 @@ function verificarSinVentana() {
   avanzar(600)
   assert.match(vm.runInContext('cuadroActual',contexto),/^pescado/)
   assert.equal(vm.runInContext("accion.cuadros.some(([n])=>n.startsWith('espaldas'))",contexto),false)
-  assert.ok(enviados.some(([n,c])=>n==='cuadroGatito' && c==='pescado1'))
   for(let i=0;i<100;i++){avanzar(10000);assert.ok(!/tablet|caminar|correr|espaldas/.test(vm.runInContext('cuadroActual',contexto)))}
   // La caída mantiene el dibujo en el aire y sólo aterriza al recibir el contacto.
   receptores.alRecibirArrastre({x:500,soltado:true,cayendo:true});avanzar(100)
@@ -129,37 +128,6 @@ function verificarSinVentana() {
   assert.equal(vm.runInContext("alertas.has('hambre')",contexto),false)
   assert.ok(vm.runInContext("alertas.has('reu:foco-reu')&&![...alertas.keys()].some(k=>k.startsWith('ses:focus-session'))",contexto),'la sesi?n vence a los 8 s sin despertar al gato')
   assert.equal(nodos.get('foco-franja').hidden,false)
-  vm.runInContext("arrastre=null;cayendo=false;cerrarMenu();ocultarTarjeta();actualizarTarjeta();actualizarHover(50,290)",contexto)
-  tiempo+=400;vm.runInContext('actualizarHover(50,290)',contexto)
-  assert.equal(nodos.get('tarjeta-gato').hidden,false)
-  assert.match(nodos.get('tarjeta-contador').textContent,/^24:5[89]|25:00$/)
-  assert.equal(nodos.get('tarjeta-foco').hidden,false)
-  assert.ok(nodos.get('tarjeta-progreso').value>=0)
-  nodos.get('tarjeta-terminar').onclick();assert.ok(enviados.some(([n,a])=>n==='cuidarGatito'&&a==='foco-cancelar'))
-  vm.runInContext('actualizarHover(500,0)',contexto);tiempo+=500;vm.runInContext('actualizarHover(500,0)',contexto)
-  assert.equal(nodos.get('tarjeta-gato').hidden,true)
-  vm.runInContext('gatito.foco=null;actualizarTarjeta()',contexto)
-  assert.equal(nodos.get('tarjeta-foco').hidden,true)
-  assert.match(nodos.get('tarjeta-resumen').textContent,/Planificación/)
-  assert.match(nodos.get('tarjeta-resumen').textContent,/sesión te espera/)
-  nodos.get('tarjeta-unirse').onclick();assert.ok(enviados.some(([n])=>n==='unirse'))
-  vm.runInContext("ocultarTarjeta();actualizarHover(50,290)",contexto)
-  tiempo+=400;vm.runInContext('actualizarHover(50,290)',contexto)
-  assert.equal(nodos.get('tarjeta-gato').hidden,false,'también aparece fuera de foco')
-  vm.runInContext('actualizarHover(500,0)',contexto)
-  assert.equal(nodos.get('tarjeta-gato').hidden,false,'retardo para alcanzar el botón')
-  tiempo+=200;vm.runInContext('actualizarHover(50,290)',contexto)
-  tiempo+=500;vm.runInContext('actualizarHover(50,290)',contexto)
-  assert.equal(nodos.get('tarjeta-gato').hidden,false,'entrar en la tarjeta la mantiene abierta')
-  vm.runInContext('arrastre={movido:true};actualizarHover(50,290)',contexto)
-  assert.equal(nodos.get('tarjeta-gato').hidden,true,'arrastrar oculta la tarjeta')
-  vm.runInContext("arrastre=null;datosTarjeta={sesiones:[],reuniones:[]};gatito.nombre='Mora';actualizarTarjeta()",contexto)
-  assert.equal(nodos.get('tarjeta-titulo').textContent,'Mora')
-  assert.equal(nodos.get('tarjeta-resumen').textContent,'')
-  vm.runInContext('gatito.foco={fase:"descanso",desde:Date.now()-150000,hasta:Date.now()+150000};actualizarTarjeta()',contexto)
-  assert.equal(nodos.get('tarjeta-titulo').textContent,'Descanso')
-  assert.match(nodos.get('tarjeta-contador').textContent,/^02:30$/)
-  assert.ok(Math.abs(nodos.get('tarjeta-progreso').value-.5)<.01)
   vm.runInContext('gatito.foco='+JSON.stringify(foco),contexto)
   receptores.alRecibirEstado({ahora:inicioFoco+25*60000,sesiones:[],reuniones:[],gatito:{color:'negro',energia:50,saciedad:50,foco:{...foco,fase:'descanso',hasta:inicioFoco+30*60000}},eventosGatito:[{tipo:'fin-foco',id:'fin-prueba',texto:'Tomate 5 minutos de descanso.'}]})
   avanzar(10000)
@@ -189,14 +157,6 @@ function verificarSinVentana() {
   assert.ok(main.includes("ventana.on('blur'"));assert.ok(main.includes('cerrarPorBlur'))
   const html=fs.readFileSync(path.join(raiz,'index.html'),'utf8')
   for(const id of ['vista-centro','agarre-alto','agarre-ancho']) assert.ok(html.includes('id="'+id+'"'))
-  // La altura oculta no permite alternar la tarjeta en cada muestra.
-  nodos.get('alertas').getBoundingClientRect=()=>({height:180})
-  nodos.get('tarjeta-gato').getBoundingClientRect=function(){return {left:0,right:100,top:100,bottom:200,height:this.hidden?0:100,width:100}}
-  vm.runInContext('arrastre=null;cayendo=false;cerrarMenu();ocultarTarjeta()',contexto)
-  for(let i=0;i<20;i++){tiempo+=400;vm.runInContext('actualizarTarjeta();actualizarHover(50,290)',contexto);assert.equal(nodos.get('tarjeta-gato').hidden,true)}
-  nodos.get('alertas').getBoundingClientRect=()=>({height:0})
-  vm.runInContext('actualizarTarjeta();actualizarHover(50,290)',contexto);tiempo+=400
-  vm.runInContext('actualizarHover(50,290)',contexto);assert.equal(nodos.get('tarjeta-gato').hidden,false)
   for(const tipo of ['mimar','jugar']){
     vm.runInContext("gatito.foco=null;gatito.energia=80;impedido=false;trabajando=false;centroAbierto=false;cursorX=null;viaje=null;maquina.vaciar();maquina.despertar();maquina.reiniciar('sentado');accion=null",contexto)
     const contar=()=>enviados.filter(([n,a,v])=>n==='cuidarGatito'&&a==='conducta-hecha'&&v===tipo).length,antes=contar()
@@ -228,8 +188,6 @@ function verificarSinVentana() {
   assert.ok(vm.runInContext("alertas.has('reu:dos-avisos:inicio')",contexto))
   avanzar(30000)
   assert.ok(vm.runInContext("descartadas.has('reu:dos-avisos:inicio')",contexto))
-  vm.runInContext("gatito.foco=null;gatito.energia=80;arrastre=null;cayendo=false;datosTarjeta={sesiones:[],reuniones:[]};actualizarTarjeta()",contexto)
-  assert.equal(nodos.get('tarjeta-resumen').textContent,'')
   const aviso={ahora:Date.now(),sesiones:[{id:'vence',name:'Prueba',status:'waiting',lastActivityAt:Date.now()}],reuniones:[]}
   receptores.alRecibirEstado(aviso)
   avanzar(5000);receptores.alRecibirEstado(aviso);avanzar(2999)
@@ -271,7 +229,7 @@ function verificarSinVentana() {
   assert.ok(vm.runInContext("encima({clientX:50,clientY:290})",contexto))
   const rectGato=nodos.get('gato').getBoundingClientRect
   nodos.get('gato').getBoundingClientRect=()=>({left:500,right:600,top:250,bottom:340})
-  vm.runInContext("for(const id of [...alertas.keys()])cerrarAlerta(id);ocultarTarjeta()",contexto)
+  vm.runInContext("for(const id of [...alertas.keys()])cerrarAlerta(id)",contexto)
   nodos.get('alertas').children=[]
   assert.ok(vm.runInContext('encima({clientX:50,clientY:290})',contexto),'cuenco captura fuera del gato')
   nodos.get('gato').getBoundingClientRect=rectGato
@@ -310,15 +268,14 @@ function verificarSinVentana() {
   }
   prepararCruce();vm.runInContext("azarOriginal=Math.random;Math.random=()=>.9;conductaPropia({tipo:'pasear'});Math.random=azarOriginal",contexto)
   assert.equal(vm.runInContext('viaje.estado',contexto),'rascar')
+  // El gato no persigue el mouse: el cursor lejos no lo hace cruzar.
   prepararCruce();vm.runInContext("observarCursor({x:2200,lado:'derecha'})",contexto);avanzar(21000)
   vm.runInContext("observarCursor({x:2200,lado:'derecha'})",contexto)
-  assert.equal(vm.runInContext('viaje.estado',contexto),'cruzar')
-  vm.runInContext("viaje=null;observarCursor({x:2200,lado:'derecha'})",contexto)
   assert.equal(vm.runInContext('viaje',contexto),null)
   prepararCruce()
-  console.log('Cruces: azar, paredes, restricciones, IPC unico, fases, aterrizaje, globos diferidos y seguimiento con espera: OK.')
+  console.log('Cruces: azar, paredes, restricciones, IPC unico, fases, aterrizaje, globos diferidos y sin perseguir el mouse: OK.')
   console.log('Alertas: sesi\u00f3n vence a 8 s sin reaparecer; men\u00fa, comida ponderada, cuenco y rechazos: OK.')
-  console.log('Tarjeta sin parpadeo y conductas propias exactamente una vez: OK.')
+  console.log('Conductas propias exactamente una vez: OK.')
   console.log('Interfaz verificada: renderer, clic/arrastre, menú, foco dormido, avisos de trabajo y despertar. DOM simulado: OK.')
   vm.runInContext("mostrarAlerta('duracion:prueba',{texto:'Prueba',ms:10000})",contexto)
   const vencimiento=vm.runInContext("alertas.get('duracion:prueba').hasta",contexto)
@@ -329,19 +286,19 @@ function verificarSinVentana() {
   console.log('Alerta sin barra: duración real y refresco sin reiniciar el plazo: OK.')
   assert.equal(vm.runInContext("alertas.get('duracion:prueba').barra",contexto),undefined)
   assert.ok(!fs.readFileSync(path.join(raiz,'mascota.css'),'utf8').includes('globo-tiempo'))
-  const prepararMirada=()=>vm.runInContext("maquina.vaciar();maquina.despertar();maquina.paso(performance.now()+1e9,{energia:80});maquina.reiniciar('sentado');gatito={energia:80};trabajando=false;centroAbierto=false;impedido=false;viaje=null;preparando=null;arrastre=null;cayendo=false;salto=null;cerrarMenu();proximaMirada=0;cursorMovido=performance.now();cursorEnPantalla=true;cursorX=0;accion={estado:'ocio',poseFinal:'sentado',hasta:0};ultimaSecuencia=null",contexto)
+  const prepararMirada=()=>vm.runInContext("maquina.vaciar();maquina.despertar();maquina.paso(performance.now()+1e9,{energia:80});maquina.reiniciar('sentado');gatito={energia:80};trabajando=false;centroAbierto=false;impedido=false;viaje=null;preparando=null;arrastre=null;cayendo=false;salto=null;cerrarMenu();proximaMirada=0;cursorMovido=performance.now();cursorCerca=true;cursorX=0;accion={estado:'ocio',poseFinal:'sentado',hasta:0};ultimaSecuencia=null",contexto)
   prepararMirada();avanzar(1)
   assert.equal(vm.runInContext('accion.estado',contexto),'ocio')
   assert.equal(vm.runInContext('cuadroActual',contexto),'mirar1')
   const bloqueMirada=vm.runInContext('accion',contexto), finBloqueMirada=bloqueMirada.hasta
   assert.equal(vm.runInContext('direccion',contexto),-1)
   assert.ok(vm.runInContext("accion.tramos.every(t=>t.de==='sentado'&&t.a==='sentado')",contexto))
-  assert.ok(vm.runInContext('proximaMirada-performance.now()>=20000&&proximaMirada-performance.now()<=60000',contexto))
+  assert.ok(vm.runInContext('Math.abs(proximaMirada-performance.now()-8000)<=1',contexto),'espera 8 s entre miradas')
   avanzar(2160);assert.equal(vm.runInContext('accion',contexto),bloqueMirada)
   assert.equal(bloqueMirada.hasta,finBloqueMirada,'la mirada conserva el plazo del bloque')
   assert.equal(vm.runInContext('miradaCursor',contexto),null)
   assert.ok(vm.runInContext("registroGatito.some(e=>e.motivo==='mirada-en-reposo')",contexto))
-  for(const bloqueo of ['cursorEnPantalla=false','cursorMovido=-Infinity','trabajando=true','gatito.foco={fase:"foco"}','cayendo=true','arrastre={movido:true,desde:0}','viaje={estado:"rascar",destino:900}']){
+  for(const bloqueo of ['cursorCerca=false','cursorMovido=-Infinity','trabajando=true','gatito.foco={fase:"foco"}','cayendo=true','arrastre={movido:true,desde:0}','viaje={estado:"rascar",destino:900}']){
     prepararMirada();vm.runInContext(bloqueo,contexto);avanzar(1)
     assert.equal(vm.runInContext('miradaCursor',contexto),null,bloqueo)
   }
