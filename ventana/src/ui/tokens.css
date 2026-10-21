@@ -1,0 +1,24 @@
+/* Material común de panel y gatito: vidrio NEUTRO (sin tinte). El color lo pone el escritorio detrás.
+   Se simula: base oscura translúcida + reflejo diagonal + brillo en el canto superior + borde de luz + sombra.
+   El peor escritorio es blanco: los textos se miden sobre esa composición (diseno/contraste-panel.md). */
+:root {
+ --fondo:#181a20;--superficie:#23262e;--elevada:#2e323c;
+ --vidrio:rgba(22,24,30,.84);--vidrio-fuerte:rgba(18,20,26,.92);
+ --vidrio-tarjeta:rgba(18,20,26,.92);--vidrio-tarjeta-hover:#2e323c;
+ --texto:#f4f5f8;--tenue:#d6d9e2;--muy-tenue:#c3c7d3;
+ --acento:#c2b5f5;--lila-claro:#d8ccff;--lila-texto:#2a1670;--aviso:#fbbf24;--error:#f29b9b;--ok:#8ee6c3;--borde:rgba(255,255,255,.16);
+ --por-hacer:var(--tenue);--en-curso:var(--acento);--hecho:var(--ok);
+ /* reflejo: diagonal sutil + luz arriba; se apila sobre --vidrio */
+ --reflejo:radial-gradient(120% 60% at 50% -10%,rgba(255,255,255,.08),transparent 60%),linear-gradient(135deg,rgba(255,255,255,.07),transparent 42%);
+ --sombra-vidrio:inset 0 1px 0 rgba(255,255,255,.3),inset 0 -1px 0 rgba(0,0,0,.2),0 1px 2px rgba(0,0,0,.3),0 10px 28px rgba(0,0,0,.35);
+ --vidrio-claro:rgba(255,255,255,.10);--vidrio-claro-hover:rgba(255,255,255,.18);--borde-claro:rgba(255,255,255,.2);
+ --t2:rgba(255,255,255,.85);--t3:rgba(255,255,255,.8);--t4:rgba(255,255,255,.78);
+ --punto-ambar:#fbbf24;--punto-lila:#c2b5f5;--punto-gris:#aeb4c2;--punto-menta:#8ee6c3;
+ --espacio-1:4px;--espacio-2:8px;--espacio-3:12px;--espacio-4:16px;
+ --radio-control:999px;--radio-panel:18px;--fuente:'Segoe UI Variable Text','Segoe UI',sans-serif;
+ --display:'Segoe UI Variable Display','Segoe UI',sans-serif;--texto-chico:12px;--texto-base:13px;--texto-titulo:15px;
+}
+button:focus-visible,summary:focus-visible,input:focus-visible,select:focus-visible,[tabindex]:focus-visible {outline:2px solid var(--acento);outline-offset:2px}
+button:disabled {cursor:not-allowed;border-style:dashed;color:var(--muy-tenue)}
+[hidden] {display:none !important}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}

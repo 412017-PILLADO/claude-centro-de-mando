@@ -1,0 +1,8 @@
+{
+  "archivo": "arte/gatito-hoja-9.png",
+  "filas": [4],
+  "nombres": ["pared1", "pared2", "pared3", "pared4"],
+  "escalarComo": {"propio": "pared1", "referencia": "parado"},
+  "alinearDerecha": true,
+  "limpiarAlfa": 180
+}

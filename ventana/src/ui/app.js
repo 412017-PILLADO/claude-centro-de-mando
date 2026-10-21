@@ -23,6 +23,14 @@ function el(tag, props = {}, ...hijos) {
 // Íconos fijos (texto propio, no datos): se arman una vez desde estas rutas SVG.
 const ICONOS = {
   claude: 'M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1',
+  lapiz: 'M4 20l1-4L16 5l3 3L8 19zM14 7l3 3',
+}
+
+// Subtítulo del bloque (bajo el título): mensajes de "vacío" o de carga. Vacío = se oculta.
+function subtitulo(id, texto) {
+  const nodo = $(id)
+  nodo.textContent = texto ?? ''
+  nodo.hidden = !texto
 }
 
 function icono(nombre) {
@@ -65,10 +73,12 @@ const nombreSesion = s => (esSuelta(s.cwd) ? 'Conversación suelta' : s.name)
 
 // --- tickets ---------------------------------------------------------------
 
+// Se agrupa por el estado de cada tablero (EN CURSO, PRUEBAS DE USUARIO…); la categoría de Jira
+// (new / indeterminate / done) solo ordena los grupos y les da color.
 const CATEGORIAS = {
-  'por-hacer': { nombre: 'Por hacer', color: 'var(--por-hacer)' },
-  'en-curso': { nombre: 'En curso', color: 'var(--en-curso)' },
-  hecho: { nombre: 'Hecho', color: 'var(--hecho)' },
+  'por-hacer': { orden: 0, color: 'var(--por-hacer)' },
+  'en-curso': { orden: 1, color: 'var(--en-curso)' },
+  hecho: { orden: 2, color: 'var(--hecho)' },
 }
 
 // statusCategory de Jira; si falta (datos viejos), se deduce del nombre del estado.
@@ -77,6 +87,16 @@ function categoria(ticket) {
   if (ticket.category === 'indeterminate') return 'en-curso'
   if (ticket.category === 'done') return 'hecho'
   return /curso|progress|prueba|review|revis|test/i.test(ticket.status ?? '') ? 'en-curso' : 'por-hacer'
+}
+
+const claveEstado = ticket => (ticket.status || 'Sin estado').trim().toUpperCase()
+const nombreEstado = clave => clave.charAt(0) + clave.slice(1).toLowerCase()
+
+// Los estados presentes, en el orden de su categoría y, dentro de ella, como vienen de Jira.
+function estados(tickets) {
+  const vistos = new Map()
+  for (const t of tickets) if (!vistos.has(claveEstado(t))) vistos.set(claveEstado(t), { clave: claveEstado(t), cat: categoria(t), orden: vistos.size })
+  return [...vistos.values()].sort((a, b) => CATEGORIAS[a.cat].orden - CATEGORIAS[b.cat].orden || a.orden - b.orden)
 }
 
 function prioridad(ticket) {
@@ -90,16 +110,17 @@ let filtro = leer('filtro') ?? 'todos'
 
 function pintarFiltros(tickets) {
   const cuentas = { todos: tickets.length }
-  for (const t of tickets) cuentas[categoria(t)] = (cuentas[categoria(t)] ?? 0) + 1
+  for (const t of tickets) cuentas[claveEstado(t)] = (cuentas[claveEstado(t)] ?? 0) + 1
   if (filtro !== 'todos' && !cuentas[filtro]) filtro = 'todos'
 
-  const opciones = [['todos', 'Todos'], ...Object.entries(CATEGORIAS).map(([clave, c]) => [clave, c.nombre])]
+  const opciones = [['todos', 'Todos'], ...estados(tickets).map(e => [e.clave, nombreEstado(e.clave)])]
   $('filtros').replaceChildren(
     ...opciones
       .filter(([clave]) => cuentas[clave])
       .map(([clave, nombre]) =>
         el('button', {
           class: `filtro ${filtro === clave ? 'activo' : ''}`,
+          'aria-pressed': String(filtro === clave),
           text: `${nombre} ${cuentas[clave]}`,
           onclick: () => {
             filtro = clave
@@ -118,6 +139,8 @@ function tarjetaTicket(ticket) {
     {
       class: 'ticket',
       role: 'button',
+      tabindex: 0,
+      onkeydown: evento => {if(evento.target===evento.currentTarget&&['Enter',' '].includes(evento.key)){evento.preventDefault();api.abrirUrl(ticket.url)}},
       title: `Abrir ${ticket.key} en Jira`,
       style: `--color-estado:${CATEGORIAS[cat].color}`,
       onclick: () => api.abrirUrl(ticket.url),
@@ -139,6 +162,7 @@ function tarjetaTicket(ticket) {
       {
         class: 'ticket-claude',
         title: 'Trabajarlo con Claude Desktop (copia el pedido)',
+        'aria-label': 'Trabajar ' + ticket.key + ' con Claude Desktop',
         onclick: evento => {
           evento.stopPropagation()
           api.trabajarTicket({ key: ticket.key, summary: ticket.summary })
@@ -155,14 +179,9 @@ function pintarTickets(tickets, ahora) {
   $('cuenta-tickets').textContent = tickets ? String(items.length) : ''
   pintarFiltros(items)
   caja.replaceChildren()
-  if (!tickets) {
-    caja.append(el('div', { class: 'vacio', text: 'Se cargan cuando abrís una sesión de Claude (usa tu conexión a Jira).' }))
-    return
-  }
-  if (items.length === 0) {
-    caja.append(el('div', { class: 'vacio', text: 'No tenés tickets abiertos asignados. 🎉' }))
-  }
-  for (const ticket of items.filter(t => filtro === 'todos' || categoria(t) === filtro)) caja.append(tarjetaTicket(ticket))
+  subtitulo('sub-tickets', !tickets ? 'Se cargan cuando abrís una sesión de Claude (usa tu conexión a Jira).' : items.length === 0 ? 'No tenés tickets abiertos asignados.' : '')
+  if (!tickets) return
+  for(const {clave} of estados(items)){const grupo=items.filter(t=>claveEstado(t)===clave&&(filtro==='todos'||clave===filtro));if(!grupo.length)continue;caja.append(el('h3',{class:'grupo-tickets',text:nombreEstado(clave)+' '+grupo.length}));for(const ticket of grupo)caja.append(tarjetaTicket(ticket))}
   caja.append(el('div', { class: 'pie', text: `Actualizado ${hace(ahora - tickets.loadedAt)} · se renueva cada 10 min` }))
 }
 
@@ -197,28 +216,28 @@ function filaSesion(sesion, ahora) {
         'span',
         { class: 'crece', title: sesion.cwd },
         el('span', { class: 'nombre', text: nombreSesion(sesion) }),
-        sesion.branch ? el('span', { class: 'tenue', text: `  ⎇ ${sesion.branch}` }) : null,
-        sesion.changed > 0 ? el('span', { class: 'aviso', text: `  ✎${sesion.changed}` }) : null,
+        sesion.branch ? el('span', { class: 'tenue rama', text: `  ⎇ ${sesion.branch}` }) : null,
       ),
-      el('span', { class: 'tenue', text: estado.texto }),
+      sesion.changed > 0 ? el('span', { class: 'etiqueta-cambios', title: `${sesion.changed} archivos con cambios` }, icono('lapiz'), String(sesion.changed)) : null,
       el(
         'button',
         {
           class: 'quitar',
           title: 'Quitar de la lista (vuelve sola si la usás de nuevo)',
+          'aria-label': 'Quitar de la lista',
           onclick: () => api.ocultarSesion(sesion.id),
         },
         '✕',
       ),
     ),
-    porcentaje === null
-      ? null
-      : el(
-          'div',
-          { class: 'contexto' },
-          el('span', { text: `${Math.round(porcentaje)}%` }),
-          el('div', { class: `mini-barra ${nivel}` }, el('div', { style: `width:${Math.min(100, porcentaje)}%` })),
-        ),
+    el('div',{class:'carpeta-sesion',text:(sesion.cwd||'')+' · '+hace(ahora-(sesion.lastActivityAt||sesion.startedAt||ahora))}),
+    el(
+      'div',
+      { class: 'contexto' },
+      porcentaje === null ? null : el('span', { class: 'porcentaje', text: `${Math.round(porcentaje)}%` }),
+      porcentaje === null ? el('span', { class: 'relleno' }) : el('div', { class: `mini-barra ${nivel}` }, el('div', { style: `width:${Math.min(100, porcentaje)}%` })),
+      el('span', { class: `estado-sesion ${estado.clase}`, text: estado.texto }),
+    ),
     corriendo.map(a =>
       el('div', { class: 'agente crece' }, el('b', { text: `● ${a.type}` }), ` ${a.description} · ${Math.round((ahora - a.startedAt) / 1000)}s`),
     ),
@@ -229,7 +248,7 @@ function pintarSesiones(sesiones, ahora) {
   $('cuenta-sesiones').textContent = String(sesiones.length)
   const caja = $('sesiones')
   caja.replaceChildren()
-  if (sesiones.length === 0) caja.append(el('div', { class: 'vacio', text: 'No hay sesiones de Claude abiertas.' }))
+  subtitulo('sub-sesiones', sesiones.length === 0 ? 'No hay sesiones de Claude abiertas.' : '')
   for (const sesion of sesiones) caja.append(filaSesion(sesion, ahora))
 }
 
@@ -259,14 +278,15 @@ function cuando(reunion, ahora) {
 
 const esInminente = (r, ahora) => Date.parse(r.start) - AVISO_ANTES_MS <= ahora && Date.parse(r.end) > ahora
 
-function pintarReuniones(reuniones, ahora) {
+const esDeHoy = (r, ahora) => new Date(r.start).toDateString() === new Date(ahora).toDateString()
+
+function pintarReuniones(todas, ahora, error, soloHoy) {
+  const reuniones = soloHoy ? todas.filter(r => esDeHoy(r, ahora)) : todas
   $('cuenta-reuniones').textContent = String(reuniones.length)
   const caja = $('reuniones')
   caja.replaceChildren()
-  if (reuniones.length === 0) {
-    caja.append(el('div', { class: 'vacio', text: 'Sin reuniones en los próximos días.' }))
-    return
-  }
+  subtitulo('sub-reuniones', error ? 'No pude leer el calendario: ' + error : reuniones.length === 0 ? (soloHoy ? 'Sin más reuniones hoy.' : 'Sin reuniones en los próximos días.') : '')
+  if (reuniones.length === 0) return
   let diaAnterior = null
   for (const r of reuniones.slice(0, 6)) {
     const dia = etiquetaDia(r.start, ahora)
@@ -275,7 +295,7 @@ function pintarReuniones(reuniones, ahora) {
     caja.append(
       el(
         'div',
-        { class: `reunion ${esInminente(r, ahora) ? 'ahora' : ''}` },
+        { class: `reunion ${Date.parse(r.end)<=ahora?'pasada':r===reuniones.find(item=>Date.parse(item.end)>ahora)?'ahora':''}` },
         el('span', { class: 'hora', text: `${hora(r.start)}–${hora(r.end)}` }),
         el('span', { class: 'crece', title: r.title, text: r.title }),
         r.joinUrl ? el('button', { class: 'unirse chico', text: 'Unirse', onclick: () => api.unirse(r.joinUrl) }) : null,
@@ -292,14 +312,7 @@ $('btn-probar').addEventListener('click', evento => {
 
 // --- secciones plegables y alto de la ventana -----------------------------
 
-for (const seccion of document.querySelectorAll('.seccion')) {
-  const nombre = seccion.dataset.seccion
-  seccion.classList.toggle('cerrada', leer(`seccion-${nombre}`) === '1')
-  seccion.querySelector('.seccion-titulo').addEventListener('click', () => {
-    const ahoraCerrada = seccion.classList.toggle('cerrada')
-    guardar(`seccion-${nombre}`, ahoraCerrada ? '1' : '0')
-  })
-}
+prepararPlegado(document, leer, guardar)
 
 // Se cierra tocando al gatito o con Esc.
 addEventListener('keydown', evento => {
@@ -343,8 +356,8 @@ let ultimo = null
 
 function pintar() {
   if (!ultimo) return
-  const { ahora, sesiones, tickets, reuniones } = ultimo
-  pintarReuniones(reuniones, ahora)
+  const { ahora, sesiones, tickets, reuniones, errorReuniones, ajustes = {} } = ultimo
+  pintarReuniones(reuniones, ahora, errorReuniones, ajustes.reunionesSoloHoy === true)
   pintarTickets(tickets, ahora)
   pintarSesiones(sesiones, ahora)
 }
@@ -354,3 +367,6 @@ api.alRecibirEstado(estado => {
   pintar()
 })
 api.pedirEstado()
+
+$('vista-centro').setAttribute('aria-pressed','true')
+$('vista-centro').onclick=()=>api.alto(altoCompleto())

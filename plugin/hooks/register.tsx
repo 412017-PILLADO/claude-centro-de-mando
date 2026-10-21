@@ -254,7 +254,56 @@ async function refreshTickets($: EngineInterface) {
 
 // --- reuniones (Google Calendar) ---------------------------------------
 
-const findCalendarServer = ($: EngineInterface) => findServer($, 'list_events', /calendar/i)
+// Los conectores de claude.ai pueden aparecer con un id en el nombre de la herramienta
+// (mcp__f36a4d31-…__list_events), que $.mcp.call no reconoce: se prueba también el nombre de /mcp,
+// y si ninguno contesta, la herramienta por su nombre completo, como la llama el modelo.
+const CALENDAR_BY_NAME = 'claude.ai Google Calendar'
+let calendarServer: string | null = null
+
+const message = (error: unknown) => (error instanceof Error ? error.message : String(error))
+
+async function callCalendar($: EngineInterface, args: Record<string, unknown>): Promise<McpToolResult | null> {
+  const spelled = await findServer($, 'list_events', /calendar/i)
+  if (spelled === null) {
+    return null
+  }
+  const candidates = [...new Set([calendarServer, spelled, CALENDAR_BY_NAME].filter((one): one is string => !!one))]
+  const errors: string[] = []
+  for (const server of candidates) {
+    try {
+      const result = await $.mcp.call(server, 'list_events', args)
+      if (!result.isError) {
+        calendarServer = server
+        return result
+      }
+      errors.push(`${server}: ${resultText(result).slice(0, 120)}`)
+    } catch (error) {
+      errors.push(`${server}: ${message(error)}`)
+    }
+  }
+  calendarServer = null
+  // Por la herramienta solo si ya está permitida: nunca abre un diálogo de permiso.
+  const tool = `mcp__${spelled}__list_events` as const
+  try {
+    const { decision } = await $.tool.check({ tool, input: args })
+    if (decision === 'allow') {
+      const answer = await $.tool.call({ tool, ...args })
+      if ('deny' in answer && answer.deny) {
+        throw new Error(answer.deny)
+      }
+      const text = answer.text ?? ''
+      if (!answer.isError) {
+        return { content: [{ type: 'text', text }], isError: false }
+      }
+      errors.push(`${tool}: ${text.slice(0, 120)}`)
+    } else {
+      errors.push(`${tool}: sin permiso (${decision}); permití esa herramienta en la configuración`)
+    }
+  } catch (error) {
+    errors.push(`${tool}: ${message(error)}`)
+  }
+  throw new Error(errors.join(' | '))
+}
 
 type CalendarEvent = {
   id?: string
@@ -298,15 +347,11 @@ function parseEvents(result: McpToolResult): CalendarEvent[] {
 
 async function refreshMeetings($: EngineInterface) {
   try {
-    const server = await findCalendarServer($)
-    if (server === null) {
-      await update($, meetings, old => ({ ...old, error: 'Google Calendar no está conectado' }))
-      return
-    }
     // Sin rango: el conector trae desde ahora hasta 7 días.
-    const result = await $.mcp.call(server, 'list_events', { orderBy: 'startTime', pageSize: 30 })
-    if (result.isError) {
-      throw new Error(resultText(result).slice(0, 120))
+    const result = await callCalendar($, { orderBy: 'startTime', pageSize: 30 })
+    if (result === null) {
+      await failMeetings($, 'Google Calendar no está conectado')
+      return
     }
     const now = await $.clock.now()
     const fresh: Meeting[] = parseEvents(result)
@@ -331,9 +376,14 @@ async function refreshMeetings($: EngineInterface) {
     await update($, meetings, () => ({ items, error: null, loadedAt: now }))
     await writeShared($, 'reuniones.json', { loadedAt: now, items })
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    await update($, meetings, old => ({ ...old, error: message }))
+    await failMeetings($, error instanceof Error ? error.message : String(error))
   }
+}
+
+// El error va aparte: una sesión que falla no pisa las reuniones que trajo otra.
+async function failMeetings($: EngineInterface, message: string) {
+  await update($, meetings, old => ({ ...old, error: message }))
+  await writeShared($, 'reuniones-error.json', { at: await $.clock.now(), error: message })
 }
 
 // --- formato -----------------------------------------------------------

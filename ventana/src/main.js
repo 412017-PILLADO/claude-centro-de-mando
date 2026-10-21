@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, Notification, Tray, clipboard, globalShortcut, ipcMain, nativeImage, screen, shell } = require('electron')
+const { app, BrowserWindow, Menu, Notification, Tray, clipboard, globalShortcut, ipcMain, nativeImage, screen, shell, powerMonitor } = require('electron')
 const fs = require('node:fs')
 const os = require('node:os')
 const path = require('node:path')
@@ -8,12 +8,19 @@ const { gatoPng } = require('./icono')
 // CENTRO_DATOS permite leer otra carpeta (para pruebas con datos simulados).
 const CENTRO = process.env.CENTRO_DATOS || path.join(os.homedir(), '.claude', 'centro')
 const SESIONES = path.join(CENTRO, 'sesiones')
+const vida = require('./gatito').crearVida(CENTRO)
+// Las capturas usan su propio perfil para no cambiar los ajustes de la persona.
+if (process.env.CENTRO_CAPTURA) {
+  const perfil = path.join(path.dirname(process.env.CENTRO_CAPTURA), 'perfil-electron')
+  fs.mkdirSync(perfil, { recursive: true })
+  app.setPath('userData', perfil)
+}
 const ATAJO = 'Control+Alt+Space'
 const SIN_SENAL_MS = 90_000 // el mod late cada 30 s
 const OLVIDAR_MS = 12 * 60 * 60 * 1000
-const ANCHO = 340
+const ANCHO = 600
 const ANCHO_MINIMO = 300
-const ANCHO_MAXIMO = 760
+const ANCHO_MAXIMO = 1400
 const ALTO_MINIMO = 64
 
 let ventana = null
@@ -92,12 +99,13 @@ function ocultarSesion(id) {
 
 function armarEstado() {
   const ahora = Date.now()
-  return {
-    ahora,
-    sesiones: leerSesiones(ahora),
-    tickets: leerJson(path.join(CENTRO, 'tickets.json')),
-    reuniones: leerReuniones(ahora),
-  }
+  const sesiones=leerSesiones(ahora), reuniones=leerReuniones(ahora)
+  const reunion=reuniones.some(r=>Date.parse(r.start)-5*60000<=ahora && ahora<(Date.parse(r.end)||Date.parse(r.start)+3600000))
+  const alerta=sesiones.some(s=>!s.sinSenal&&s.status==='waiting'&&ahora-(s.lastActivityAt||s.startedAt||0)<10*60000)
+  const contexto={reunion,alerta,trabajando:sesiones.some(s=>!s.sinSenal&&s.status==='working'),inactivoSeg:powerMonitor.getSystemIdleTime(),panel:ventana?.isVisible()||false,azar:Math.random()}
+  if(typeof screen!=='undefined')contexto.bordes=bordesMascota()
+  const observado=mascotaLista?vida.observar(contexto):{datos:vida.leer(),eventos:[]}
+  return {ahora,gatito:observado.datos,eventosGatito:observado.eventos,contextoGatito:contexto,sesiones,reuniones,errorReuniones:errorReuniones(),ajustes:{reunionesSoloHoy:ajustes().reunionesSoloHoy===true},tickets:leerJson(path.join(CENTRO,'tickets.json'))}
 }
 
 // --- reuniones -----------------------------------------------------------
@@ -108,6 +116,13 @@ const avisosDados = new Set()
 let reunionDePrueba = null
 
 const LINKS_PERMITIDOS = /^https:\/\/(meet\.google\.com|([\w-]+\.)?zoom\.us|teams\.microsoft\.com|teams\.live\.com)\//i
+
+// Último error del calendario, si es más nuevo que la última carga buena.
+function errorReuniones() {
+  const error = leerJson(path.join(CENTRO, 'reuniones-error.json'))
+  const cargadas = leerJson(path.join(CENTRO, 'reuniones.json'))?.loadedAt ?? 0
+  return error?.error && error.at > cargadas ? String(error.error) : null
+}
 
 function leerReuniones(ahora) {
   const guardadas = leerJson(path.join(CENTRO, 'reuniones.json'))?.items ?? []
@@ -205,13 +220,22 @@ function enviarEstado() {
 
 const ALTO_MASCOTA = 340 // gatito + lugar para globos apilados encima
 let mascota = null
+let mascotaLista = false
 
 const archivoAjustes = () => path.join(app.getPath('userData'), 'ajustes.json')
 const ajustes = () => leerJson(archivoAjustes()) ?? {}
 const guardarAjuste = (clave, valor) => fs.writeFileSync(archivoAjustes(), JSON.stringify({ ...ajustes(), [clave]: valor }))
 
+function monitorMascota() {
+  return require('./monitores').elegirMonitor(screen.getAllDisplays(), ajustes().monitor, screen.getPrimaryDisplay())
+}
+
+function bordesMascota() {
+  const lados=require('./monitores').vecinos(screen.getAllDisplays(),monitorMascota())
+  return {izquierda:!!lados.izquierda,derecha:!!lados.derecha}
+}
 function zonaMascota() {
-  const { workArea } = screen.getPrimaryDisplay()
+  const { workArea } = monitorMascota()
   return { x: workArea.x, y: workArea.y + workArea.height - ALTO_MASCOTA, width: workArea.width, height: ALTO_MASCOTA }
 }
 
@@ -232,11 +256,17 @@ function crearMascota() {
   })
   mascota.setAlwaysOnTop(true, 'floating')
   mascota.setIgnoreMouseEvents(true, { forward: true })
+  mascota.webContents.once('did-finish-load',()=>{mascotaLista=true;enviarEstado()})
   mascota.loadFile(path.join(__dirname, 'ui', 'mascota.html'))
   mascota.once('ready-to-show', () => mascota.showInactive())
   mascota.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
   mascota.webContents.on('will-navigate', evento => evento.preventDefault())
+  mascota.on('blur',()=>mascota?.webContents.send('cerrar-menu'))
   mascota.on('closed', () => {
+    if (arrastreGlobal) { clearInterval(arrastreGlobal.reloj); arrastreGlobal = null }
+    cancelarSalto(false)
+    if(caidaGlobal){clearInterval(caidaGlobal);caidaGlobal=null}
+    mascotaLista=false
     mascota = null
   })
 }
@@ -263,7 +293,11 @@ function enviarPronto() {
 
 function vigilar() {
   fs.mkdirSync(SESIONES, { recursive: true })
-  fs.watch(CENTRO, { recursive: true }, enviarPronto)
+  fs.watch(CENTRO, { recursive: true }, (_evento, nombre) => {
+    // La vida se guarda acá mismo: no dispara otra lectura de trabajo.
+    if (nombre && /^gatito\.json(?:\.tmp)?$/.test(String(nombre))) return
+    enviarPronto()
+  })
   setInterval(enviarEstado, 5000) // refresca los "hace X" y detecta sesiones sin señal
   setInterval(revisarReuniones, 15_000)
   revisarReuniones()
@@ -286,10 +320,8 @@ function trabajarTicketEnClaude(ticket) {
 
 const archivoVentana = () => path.join(app.getPath('userData'), 'tamano.json')
 
-// El centro de mando ya no flota solo: se abre al tocar al gatito, al lado del gato y
-// apoyado sobre la barra de tareas (crece hacia arriba).
-// Tamaño: el ancho lo elige la persona; el alto se ajusta al contenido hasta un tope,
-// que por defecto es lo que entra en la pantalla (así se ve todo sin scroll).
+// El centro abre al costado del gato, con ancho para tres columnas y alto acotado.
+// El ancho lo elige la persona; el alto se ajusta al contenido hasta 540 px.
 // Si la persona la achica, ese alto pasa a ser el tope y aparece el scroll.
 const guardada = () => leerJson(archivoVentana()) ?? {}
 let ancho = ANCHO
@@ -297,33 +329,37 @@ let altoMaximo = null // null = lo que entre en la pantalla
 let altoNatural = ALTO_MINIMO
 let inicioRedimension = null
 let pisoDelPanel = null // borde de abajo del panel (y de pantalla): crece hacia arriba desde ahí
+let centroPanel = null
 let ladoDelPanel = 'izquierda' // de qué lado del gatito se abrió (el gato mira hacia ahí)
 
 function cargarTamano() {
-  const { width, altoMax } = guardada()
-  ancho = width ?? ANCHO
+  const { width, altoMax, diseno } = guardada()
+  // Migración única (diseno 3): el ancho viejo (1080) pasa al nuevo por defecto; un ancho elegido a mano (<= 760) se respeta.
+  ancho = diseno === 3 ? width ?? ANCHO : typeof width === 'number' && width <= 760 ? width : ANCHO
   altoMaximo = altoMax ?? null
+  if (diseno !== 3) guardarPosicion()
 }
 
 function guardarPosicion() {
-  fs.writeFileSync(archivoVentana(), JSON.stringify({ width: ancho, altoMax: altoMaximo }))
+  fs.writeFileSync(archivoVentana(), JSON.stringify({ width: ancho, altoMax: altoMaximo, diseno: 3 }))
 }
 
-const areaDeTrabajo = () => screen.getPrimaryDisplay().workArea
+const areaDeTrabajo = () => monitorMascota().workArea
 
 function topeDeAlto() {
   const area = areaDeTrabajo()
   const piso = pisoDelPanel ?? area.y + area.height - 8
-  return Math.max(ALTO_MINIMO, Math.min(altoMaximo ?? Infinity, piso - area.y - 8))
+  return Math.max(ALTO_MINIMO, Math.min(altoMaximo ?? 540, piso - area.y - 8))
 }
 
 function ajustarTamano() {
   if (!ventana) return
-  const { x } = ventana.getBounds()
   const area = areaDeTrabajo()
   const piso = pisoDelPanel ?? area.y + area.height - 8
   const alto = Math.round(Math.max(ALTO_MINIMO, Math.min(altoNatural, topeDeAlto())))
-  ventana.setBounds({ x, y: Math.max(area.y + 8, piso - alto), width: Math.round(ancho), height: alto })
+  const ubicacion = require('./monitores').ubicarPanel(area, centroPanel ?? area.x + area.width - 170, ancho)
+  ladoDelPanel = ubicacion.lado
+  ventana.setBounds({ x: ubicacion.x, y: Math.max(area.y + 8, piso - alto), width: ubicacion.width, height: alto })
 }
 
 // gatoX: centro del gatito en la pantalla. Sin gatito, se abre abajo a la derecha.
@@ -331,16 +367,8 @@ function abrirCentro(gatoX) {
   if (!ventana) return
   const area = areaDeTrabajo()
   const centro = typeof gatoX === 'number' ? gatoX : area.x + area.width - 60
-  const separacion = 56 // medio gatito y un poco de aire
+  centroPanel = Math.max(area.x + 64, Math.min(area.x + area.width - 64, centro))
   pisoDelPanel = area.y + area.height - 8
-  let x = centro - separacion - ancho // a la izquierda del gato…
-  ladoDelPanel = 'izquierda'
-  if (x < area.x + 8) {
-    x = centro + separacion // …o a la derecha si no entra
-    ladoDelPanel = 'derecha'
-  }
-  x = Math.max(area.x + 8, Math.min(area.x + area.width - ancho - 8, x))
-  ventana.setBounds({ x: Math.round(x), y: pisoDelPanel - ALTO_MINIMO, width: Math.round(ancho), height: ALTO_MINIMO })
   ajustarTamano()
   ventana.show()
   ventana.focus()
@@ -358,7 +386,11 @@ function crearVentana() {
     width: ancho,
     height: ALTO_MINIMO,
     frame: false,
+    // Ventana totalmente transparente: solo flotan los bloques (el vidrio se simula en CSS por bloque).
+    // Un material nativo (acrylic) se aplicaría a toda la ventana y volvería a crear el contenedor de fondo.
     transparent: true,
+    backgroundMaterial: 'none',
+    backgroundColor: '#00000000',
     alwaysOnTop: true,
     skipTaskbar: true,
     resizable: false,
@@ -371,6 +403,11 @@ function crearVentana() {
   ventana.loadFile(path.join(__dirname, 'ui', 'index.html'))
   // El gatito se entera si el centro está abierto (se queda sentado al lado).
   ventana.on('show', () => mascota?.webContents.send('centro-visible', { visible: true, lado: ladoDelPanel }))
+  ventana.on('blur', () => {
+    const cursor = screen.getCursorScreenPoint(), caja = mascota?.getBounds()
+    const sobreGato = caja && centroGatoGlobal !== null && Math.abs(cursor.x-centroGatoGlobal)<54 && cursor.y>=caja.y+caja.height-84 && cursor.y<=caja.y+caja.height
+    if (require('./panel').cerrarPorBlur({redimensionando:Boolean(inicioRedimension),sobreGato})) cerrarCentro()
+  })
   ventana.on('hide', () => mascota?.webContents.send('centro-visible', { visible: false, lado: ladoDelPanel }))
   ventana.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
   ventana.webContents.on('will-navigate', evento => evento.preventDefault())
@@ -414,7 +451,104 @@ function crearBandeja() {
 
 // --- IPC ---------------------------------------------------------------
 
+// La franja sigue al cursor global, incluso fuera del monitor original.
+let arrastreGlobal = null, caidaGlobal = null, centroGatoGlobal = null
+let saltoGlobal=null
+function cancelarSalto(caer=true) {
+  if(!saltoGlobal)return
+  const punto=saltoGlobal.punto
+  clearInterval(saltoGlobal.reloj);saltoGlobal=null
+  if(caer&&mascota)empezarCaida(punto)
+}
+ipcMain.on('gatito-cruzar',(evento,lado)=>{
+  if(!mascota||evento.sender!==mascota.webContents||!['izquierda','derecha'].includes(lado)||saltoGlobal||arrastreGlobal||caidaGlobal)return
+  const estado=armarEstado(),c=estado.contextoGatito
+  const origen=monitorMascota(),g=require('./monitores'),destino=g.vecinos(screen.getAllDisplays(),origen)[lado]
+  if(!destino||c.reunion||c.alerta||c.trabajando||c.panel||estado.gatito.foco?.fase==='foco'){
+    mascota.webContents.send('gatito-arrastre',{x:(centroGatoGlobal??origen.workArea.x+75)-origen.workArea.x,cancelado:true});return
+  }
+  const plan=g.planSalto(origen,destino,lado),desde=Date.now()
+  mascota.setIgnoreMouseEvents(true,{forward:true})
+  saltoGlobal={punto:plan.despegue,reloj:setInterval(()=>{
+    if(!mascota){cancelarSalto(false);return}
+    const t=Math.min(1,(Date.now()-desde)/650),p=g.puntoSalto(plan,t)
+    saltoGlobal.punto={x:Math.round(p.x),y:Math.round(p.y)}
+    const area=screen.getDisplayNearestPoint(saltoGlobal.punto).workArea,izquierda=Math.round(p.x-area.width/2)
+    mascota.setBounds({x:izquierda,y:Math.round(p.y-ALTO_MASCOTA),width:area.width,height:ALTO_MASCOTA})
+    mascota.webContents.send('gatito-arrastre',{x:p.x-izquierda,saltando:true,fase:p.fase,lado})
+    if(t===1){
+      clearInterval(saltoGlobal.reloj);saltoGlobal=null;guardarAjuste('monitor',destino.id)
+      mascota.setBounds(zonaMascota())
+      mascota.webContents.send('gatito-arrastre',{aterrizo:true,x:plan.aterrizaje.x-destino.workArea.x})
+      enviarEstado()
+    }
+  },16)}
+})
+function empezarCaida(cursor = screen.getCursorScreenPoint()) {
+  if (!mascota) return
+  if (caidaGlobal) clearInterval(caidaGlobal)
+  const display = screen.getDisplayNearestPoint(cursor), area=display.workArea
+  guardarAjuste('monitor', display.id)
+  const piso=area.y+area.height-ALTO_MASCOTA
+  const origen=Math.max(area.y-ALTO_MASCOTA+84,Math.min(piso,mascota.getBounds().y))
+  const x=Math.max(area.x+54,Math.min(area.x+area.width-54,cursor.x))
+  const fisica=require('./caida'), caida=fisica.crearCaida(origen,piso,Date.now())
+  mascota.setBounds({x:area.x,y:Math.round(origen),width:area.width,height:ALTO_MASCOTA})
+  mascota.setIgnoreMouseEvents(true,{forward:true})
+  mascota.webContents.send('gatito-arrastre',{x:x-area.x,soltado:true,cayendo:true})
+  caidaGlobal=setInterval(()=>{
+    if(!mascota){clearInterval(caidaGlobal);caidaGlobal=null;return}
+    const paso=fisica.pasoCaida(caida,Date.now())
+    mascota.setBounds({x:area.x,y:Math.round(paso.y),width:area.width,height:ALTO_MASCOTA})
+    if(paso.termino){clearInterval(caidaGlobal);caidaGlobal=null;mascota.webContents.send('gatito-arrastre',{x:x-area.x,aterrizo:true})}
+  },16)
+}
+function terminarArrastre() {
+  if (!arrastreGlobal || !mascota) return
+  clearInterval(arrastreGlobal.reloj)
+  arrastreGlobal = null
+  empezarCaida()
+}
+ipcMain.on('gatito-arrastre', (evento, si) => {
+  if (!mascota || evento.sender !== mascota.webContents) return
+  if(saltoGlobal)return
+  if (!si) return terminarArrastre()
+  if (caidaGlobal) {clearInterval(caidaGlobal);caidaGlobal=null}
+  cerrarCentro()
+  const origen = screen.getCursorScreenPoint()
+  arrastreGlobal = {origen, reloj: setInterval(() => {
+    if (!mascota) return terminarArrastre()
+    const cursor = screen.getCursorScreenPoint()
+    if (Math.hypot(cursor.x-origen.x,cursor.y-origen.y) < 5) return
+    const display = screen.getDisplayNearestPoint(cursor)
+    const width = display.workArea.width
+    const x = Math.round(cursor.x - width / 2)
+    mascota.setBounds({x, y: Math.round(cursor.y - ALTO_MASCOTA + 42), width, height: ALTO_MASCOTA})
+    mascota.webContents.send('gatito-arrastre', {x: cursor.x - x})
+  }, 16)}
+})
+ipcMain.on('gatito-posicion', (evento, x) => { if(mascota && evento.sender===mascota.webContents && Number.isFinite(x)) centroGatoGlobal=mascota.getBounds().x+x })
+ipcMain.on('gatito-cuadro', (evento, cuadro) => {
+  if (mascota && evento.sender === mascota.webContents && typeof cuadro === 'string' && /^[a-z0-9-]+$/.test(cuadro)) ventana?.webContents.send('gatito-cuadro', cuadro)
+})
+
 ipcMain.on('pedir-estado', enviarEstado)
+ipcMain.on('abrir-gatito', (evento,x) => {if(evento.sender!==mascota?.webContents)return;abrirCentro(mascota.getBounds().x+x)})
+ipcMain.on('gatito-descanso', (_evento, si) => vida.actuar('descanso', Boolean(si)))
+// Ajustes del centro (no del gato): solo los conocidos y con su tipo.
+ipcMain.on('ajuste', (_evento, { clave, valor } = {}) => {
+  if (clave !== 'reunionesSoloHoy' || typeof valor !== 'boolean') return
+  guardarAjuste(clave, valor)
+  enviarEstado()
+})
+ipcMain.on('gatito-accion', (_evento, { accion, valor } = {}) => {
+  const permitidas = ['nombre', 'color', 'croquetas', 'pescado', 'leche', 'mimar', 'jugar', 'siesta', 'raton', 'caja', 'pausas', 'pausa-respuesta', 'conducta-hecha', 'foco-iniciar', 'foco-cancelar']
+  if (!permitidas.includes(accion)) return
+  const cuidado = vida.actuar(accion, valor)
+  enviarEstado()
+  if(['croquetas','pescado','leche','mimar','jugar','siesta','raton','caja'].includes(accion)&&cuidado.resultado?.aceptado===false)mascota?.webContents.send('gatito-accion',{aceptado:false,texto:cuidado.resultado.texto})
+  if(cuidado.resultado?.aceptado && cuidado.resultado.accion===accion) mascota?.webContents.send('gatito-accion', {accion,favorita:cuidado.resultado.favorita,texto:cuidado.resultado.texto})
+})
 ipcMain.on('trabajar-ticket', (_e, ticket) => trabajarTicketEnClaude(ticket))
 ipcMain.on('abrir-url', (_e, url) => typeof url === 'string' && url.startsWith('https://') && shell.openExternal(url))
 ipcMain.on('unirse', (_e, url) => unirse(url))
@@ -423,11 +557,21 @@ ipcMain.handle('posicion-mouse', evento => {
   if (!mascota || evento.sender !== mascota.webContents) return null
   const cursor = screen.getCursorScreenPoint()
   const zona = mascota.getBounds()
-  return { x: cursor.x - zona.x, y: cursor.y - zona.y }
+  const lados=require('./monitores').vecinos(screen.getAllDisplays(),monitorMascota()),display=screen.getDisplayNearestPoint(cursor)
+  const lado=Object.keys(lados).find(l=>lados[l]?.id===display.id)||null
+  return { x: cursor.x - zona.x, y: cursor.y - zona.y, lado }
 })
 // Solo la página de la mascota decide cuándo la franja deja de dejar pasar los clics.
+ipcMain.on('menu-rapido', (evento, abierto) => {
+  if(evento.sender!==mascota?.webContents)return
+  mascota.setFocusable(Boolean(abierto))
+  if(abierto)mascota.focus()
+})
 ipcMain.on('mascota-interactiva', (evento, si) => {
-  if (mascota && evento.sender === mascota.webContents) mascota.setIgnoreMouseEvents(!si, { forward: true })
+  if (mascota && evento.sender === mascota.webContents) mascota.setIgnoreMouseEvents(Boolean(caidaGlobal||saltoGlobal) || !si, { forward: true })
+})
+ipcMain.on('reubicar-centro', (evento, x) => {
+  if (mascota && evento.sender === mascota.webContents && Number.isFinite(x) && ventana?.isVisible()) abrirCentro(mascota.getBounds().x + x)
 })
 ipcMain.on('ocultar-sesion', (_e, id) => ocultarSesion(id))
 ipcMain.on('probar-alerta', probarAlerta)
@@ -440,7 +584,7 @@ ipcMain.on('alternar-centro', (evento, x) => {
 })
 // La interfaz mide cuánto ocupa su contenido completo; la ventana toma ese alto hasta el tope.
 ipcMain.on('alto', (_e, alto) => {
-  if (typeof alto !== 'number') return
+  if (!Number.isFinite(alto) || alto < 0) return
   altoNatural = alto
   ajustarTamano()
 })
@@ -455,7 +599,7 @@ ipcMain.on('redimension', (_e, { dx, dy, lado }) => {
   if (lado === 'ancho') {
     // Crece hacia la izquierda: el borde derecho queda fijo.
     ancho = Math.min(ANCHO_MAXIMO, Math.max(ANCHO_MINIMO, inicio.width - dx))
-    ventana.setBounds({ x: Math.round(inicio.x + inicio.width - ancho), y: inicio.y, width: Math.round(ancho), height: inicio.height })
+    ajustarTamano()
   } else {
     // La manija del alto está arriba (el panel crece hacia arriba desde la barra de tareas).
     altoMaximo = Math.max(ALTO_MINIMO, inicio.height - dy)
@@ -476,6 +620,23 @@ ipcMain.on('tamano-automatico', () => {
   guardarPosicion()
 })
 
+ipcMain.on('gatito-registro', (evento, entradas) => {
+  if (!mascota || evento.sender !== mascota.webContents || !Array.isArray(entradas) || entradas.length > 200) return
+  const palabra = v => typeof v === 'string' && /^[a-z-]{1,40}$/.test(v)
+  const validas = entradas.filter(e => e && Number.isFinite(e.t) && palabra(e.estado) &&
+    (e.variante === null || palabra(e.variante)) && (e.id === null || palabra(e.id)) &&
+    Number.isFinite(e.prioridad) && palabra(e.poseInicial) && palabra(e.poseFinal) && palabra(e.motivo))
+    .map(({t,estado,variante,id,prioridad,poseInicial,poseFinal,motivo}) => JSON.stringify({t,estado,variante,id,prioridad,poseInicial,poseFinal,motivo}))
+  if (!validas.length) return
+  try {
+    const carpeta = path.join(os.homedir(), '.claude', 'centro')
+    const archivo = path.join(carpeta, 'gatito-registro.jsonl')
+    fs.mkdirSync(carpeta, {recursive:true})
+    const anteriores = fs.existsSync(archivo) ? fs.readFileSync(archivo,'utf8').split('\n').filter(Boolean) : []
+    fs.writeFileSync(archivo, anteriores.concat(validas).slice(-2000).join('\n')+'\n')
+  } catch (error) { console.error('No se pudo guardar el registro del gatito:', error.code) }
+})
+
 // --- arranque ----------------------------------------------------------
 
 if (!app.requestSingleInstanceLock()) {
@@ -489,21 +650,81 @@ if (!app.requestSingleInstanceLock()) {
     crearVentana()
     crearBandeja()
     if (ajustes().mascota !== false) crearMascota()
-    screen.on('display-metrics-changed', () => mascota?.setBounds(zonaMascota()))
+    for (const evento of ['display-added', 'display-removed', 'display-metrics-changed']) screen.on(evento, () => {
+      if(saltoGlobal){cancelarSalto();enviarEstado();return}
+      if (caidaGlobal) {
+        clearInterval(caidaGlobal); caidaGlobal=null
+        mascota?.webContents.send('gatito-arrastre', {x:monitorMascota().workArea.width/2,aterrizo:true})
+      }
+      mascota?.setBounds(zonaMascota())
+      enviarEstado()
+      if (ventana?.isVisible()) {
+        if (hayGatito()) mascota.webContents.send('pedir-posicion-reubicar')
+        else abrirCentro()
+      }
+    })
     vigilar()
     globalShortcut.register(ATAJO, alternarCentroDesdeAfuera)
     // Para revisar la interfaz sin mirarla: CENTRO_CAPTURA=ruta.png guarda una captura y cierra.
     if (process.env.CENTRO_CAPTURA) {
       ventana.webContents.once('did-finish-load', () =>
         setTimeout(async () => {
-          abrirCentro()
-          await new Promise(listo => setTimeout(listo, 400))
-          if (process.env.CENTRO_PROBAR_ALERTA) {
-            probarAlerta()
-            await new Promise(listo => setTimeout(listo, 600))
+          try {
+            const centroCaptura = mascota ? await mascota.webContents.executeJavaScript("centroDelGato()") : null
+            abrirCentro(mascota && centroCaptura !== null ? mascota.getBounds().x + centroCaptura : undefined)
+            if (process.env.CENTRO_VERIFICAR) await require('../scripts/verificar-interfaz.cjs')({ ventana, mascota })
+            await new Promise(listo => setTimeout(listo, 400))
+            if (process.env.CENTRO_PROBAR_ALERTA) {
+              probarAlerta()
+              await new Promise(listo => setTimeout(listo, 600))
+            }
+            if (process.env.CENTRO_ACCION && mascota) {
+              mascota.webContents.send('gatito-accion', process.env.CENTRO_ACCION)
+              await mascota.webContents.executeJavaScript('maquina.reiniciar(); accion = null')
+              await new Promise(listo => setTimeout(listo, 1200))
+            }
+
+            if(process.env.CENTRO_ESCENA==='centro-datos'){
+              await ventana.webContents.executeJavaScript("for(const s of document.querySelectorAll('[data-seccion]'))s.hidden=false;ultimo={ahora:Date.now(),sesiones:[{id:'demo',name:'Centro de mando',cwd:'C:/proyectos/centro',status:'working',lastActivityAt:Date.now(),branch:'main',usage:{percent:36},agents:[]}],tickets:{loadedAt:Date.now(),items:[{key:'CMD-42',summary:'Revisar la agenda del equipo',status:'En curso',category:'indeterminate',url:'https://example.com'}]},reuniones:[{id:'demo',title:'Planificación del equipo',start:new Date(Date.now()+120000).toISOString(),end:new Date(Date.now()+1800000).toISOString(),joinUrl:'https://example.com'}]};pintar()")
+            }
+            if(process.env.CENTRO_ESCENA==='radial'&&mascota){await mascota.webContents.executeJavaScript('abrirMenu()');await new Promise(listo=>setTimeout(listo,100));ventana.showInactive()}
+            if(['foco','foco-hover'].includes(process.env.CENTRO_ESCENA)&&mascota){
+              await mascota.webContents.executeJavaScript("viaje=null;gatito={...gatito,foco:{fase:'foco',desde:Date.now(),hasta:Date.now()+25*60000,minutos:25}};maquina.vaciar();maquina.despertar();maquina.reiniciar();maquina.pedir('dormir',8,'captura-foco');accion=null")
+              await new Promise(listo=>setTimeout(listo,1100))
+            }
+            // Escenas reproducibles para revisar los intermedios en Windows.
+            if (process.env.CENTRO_ESCENA === 'pescado-mitad' && mascota) {
+              await mascota.webContents.executeJavaScript("maquina.reiniciar('sentado'); maquina.pedir('pescado',8); accion=null")
+              await new Promise(listo=>setTimeout(listo,2100))
+            }
+            if (mascota && ['borde','hambre','pausa'].includes(process.env.CENTRO_ESCENA)) {
+              const escena=process.env.CENTRO_ESCENA
+              await mascota.webContents.executeJavaScript(escena==='borde'?"viaje=null; x=destinoBorde('derecha','rascar'); direccion=1; maquina.reiniciar('parado');maquina.pedir('rascar',8);accion=null":escena==='hambre'?"viaje=null;maquina.reiniciar('sentado');maquina.pedir('hambre',8);accion=null":"viaje=null;maquina.reiniciar('parado');maquina.pedir('estirar',8);accion=null;globoPausa('captura-pausa')")
+              await new Promise(listo=>setTimeout(listo,700))
+            }
+            if (process.env.CENTRO_ESCENA === 'acostarse' && mascota) {
+              await mascota.webContents.executeJavaScript("maquina.reiniciar('sentado'); maquina.pedir('dormir', 8); accion=null")
+              await new Promise(listo => setTimeout(listo, 420))
+            }
+            if (process.env.CENTRO_ESCENA === 'seccion-oculta') {
+              await ventana.webContents.executeJavaScript(" document.querySelector('[data-seccion=tickets]').hidden=false; document.querySelector('[data-seccion=tickets] .seccion-titulo').click()")
+              await new Promise(listo => setTimeout(listo, 100))
+            }
+            if (process.env.CENTRO_ESCENA === 'caida' && mascota) {
+              const area=monitorMascota().workArea
+              mascota.setBounds({x:area.x,y:area.y-ALTO_MASCOTA+100,width:area.width,height:ALTO_MASCOTA})
+              empezarCaida({x:area.x+Math.round(area.width/2),y:area.y+100})
+              await new Promise(listo => setTimeout(listo, 350))
+            }
+            fs.writeFileSync(process.env.CENTRO_CAPTURA, (await ventana.webContents.capturePage()).toPNG())
+            if (process.env.CENTRO_CAPTURA_MASCOTA && mascota) {
+              fs.writeFileSync(process.env.CENTRO_CAPTURA_MASCOTA, (await mascota.webContents.capturePage()).toPNG())
+            }
+            app.quit()
+          } catch (error) {
+            console.error('Falló la captura o verificación:', error)
+            app.exit(1)
           }
-          fs.writeFileSync(process.env.CENTRO_CAPTURA, (await ventana.webContents.capturePage()).toPNG())
-          app.quit()
         }, 1500),
       )
     }

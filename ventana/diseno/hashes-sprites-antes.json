@@ -1,0 +1,562 @@
+[
+    {
+        "archivo":  "acostar1.png",
+        "Hash":  "2D8A22E4AD3C76FECDAE716FDFFCC5EAE18D8944CCA4C8E035764C171B905591"
+    },
+    {
+        "archivo":  "acostar2.png",
+        "Hash":  "E8C1DB34B3EB3FD1B20E2B8BE67A0DD12033092CD06DE734CF84B18FEAE2EE34"
+    },
+    {
+        "archivo":  "agachar1.png",
+        "Hash":  "9D36A216F2558CD646B753DBFAF751CDDDB4E708F5989CE2AC0D13DB3B90EF03"
+    },
+    {
+        "archivo":  "agachar2.png",
+        "Hash":  "21A3ADCF112FB6E6051AF47BC23B8E872048B04F70B734E1AB0CB2185D323D58"
+    },
+    {
+        "archivo":  "agachar3.png",
+        "Hash":  "FD12E1D1F03B977F2930CFFB7A930C1C09184D62E244DBA46E75E1CC6EB1CB03"
+    },
+    {
+        "archivo":  "agazapado1.png",
+        "Hash":  "D83AA0305B963FF0E87710E7D38AB82B099FF6FFF624900956A9AA44F4805A3B"
+    },
+    {
+        "archivo":  "agazapado2.png",
+        "Hash":  "D441A96853ACF3811414BA9AD0DE29B93666E01BC13CE290A6AFD75864390079"
+    },
+    {
+        "archivo":  "alerta.png",
+        "Hash":  "A679806A998E8B5D453784076B0993C45AF403E56EFD21F7DC3D8E1B46349125"
+    },
+    {
+        "archivo":  "alzar-fin.png",
+        "Hash":  "3FE5B7466F3661890A18DFCA33596673633FDC705D1C0551AD8B86D381DA2B1B"
+    },
+    {
+        "archivo":  "alzar0.png",
+        "Hash":  "8271BB9A4ABAEF12473FC777075D34BB0DB71D033F5277C02B427615612B4445"
+    },
+    {
+        "archivo":  "alzar1.png",
+        "Hash":  "A907A753274FE5BFE851715B0796AECC6497AC1B2D1AD2F23CF54ADE4B46F7E6"
+    },
+    {
+        "archivo":  "alzar2.png",
+        "Hash":  "6821400306E6ECB741B0481A9760B074F1C90DF21CB26BB725474157469D99FC"
+    },
+    {
+        "archivo":  "arrancar1.png",
+        "Hash":  "EB20B0D30AD565FFD13C3C42B3D683A35FB5203A2E5E8D849AC2F3CF1CC9BD0C"
+    },
+    {
+        "archivo":  "arrancar2.png",
+        "Hash":  "C89F6B44EA3A604A4C1C73976F469308ED3807761A30DBDFD05DD131D71BD55B"
+    },
+    {
+        "archivo":  "arrancar3.png",
+        "Hash":  "571B15C7358A8DCD60D7331B55E2CFA50F3C72BF07FD328620709831D8B473A8"
+    },
+    {
+        "archivo":  "atento.png",
+        "Hash":  "7B4CD4D9C585A9CF006AF90D3A0C5B5AF2919CFF67584E94E8A6F440747E6095"
+    },
+    {
+        "archivo":  "aterrizar1.png",
+        "Hash":  "8BF767F128C62072427CFF0DA4C179268F5E9316E7BE7BFD3BB59CE08B753E78"
+    },
+    {
+        "archivo":  "aterrizar2.png",
+        "Hash":  "3FE5B7466F3661890A18DFCA33596673633FDC705D1C0551AD8B86D381DA2B1B"
+    },
+    {
+        "archivo":  "bolita.png",
+        "Hash":  "E95A5666BB31754E4A41CF41EF79F2C24028FEAE3D0DCE733805BD3DD97D9943"
+    },
+    {
+        "archivo":  "bostezo1.png",
+        "Hash":  "8F3A061428555239B5925C38869D351EBC4A535C85B84F21362B35624D468596"
+    },
+    {
+        "archivo":  "bostezo2.png",
+        "Hash":  "BEBEBE6EA39BF60819985553BD2156B561CC00BBC5230BD8B555246C5C2D62B4"
+    },
+    {
+        "archivo":  "bostezo3.png",
+        "Hash":  "41E7C6AC3525F640EB1F4814FE128C540A88522ECC02F4BB29BAF67AB601C615"
+    },
+    {
+        "archivo":  "cabecear1.png",
+        "Hash":  "9C97BE0965971332F72E2ACBBA01024C69BE5D8FD13344AA2A74FB196E6EE8F9"
+    },
+    {
+        "archivo":  "cabecear2.png",
+        "Hash":  "AFD3B8D1568F2CE45898400A4ECA0C09D45F6A7E9B963D9C2C01BA6F887D6AAD"
+    },
+    {
+        "archivo":  "cabecear3.png",
+        "Hash":  "B1EEC79FA57932220C30524307DFAFE15D001048D50D527113D4E053C92FDC2D"
+    },
+    {
+        "archivo":  "caer1.png",
+        "Hash":  "585B63FEAAEAD3AE0A3E27B19CB66991CCCF1F4C17E9B59C05B2C600E8D4A6EF"
+    },
+    {
+        "archivo":  "caja1.png",
+        "Hash":  "56616C9A6156EDDEFCFCF58E783F4FD85B4A5DABA426A9DD60497B280BF5DC0B"
+    },
+    {
+        "archivo":  "caja2.png",
+        "Hash":  "F13BA6A17726A6D749E953C90668149D4D2C5C67C26AD48C634D1F058423C6A1"
+    },
+    {
+        "archivo":  "caja3.png",
+        "Hash":  "84CBFCDCF7ABBAE56193F45A06D1F837F50762EEEC9E3CCE0BEBE695838D1D88"
+    },
+    {
+        "archivo":  "caja4.png",
+        "Hash":  "EF11CCD775D86C51E465B0349C6252A5C87D6B1C598F9CDF4DDB5702D923DD41"
+    },
+    {
+        "archivo":  "caminar1.png",
+        "Hash":  "DF5A083633CB67030F36745A39E76EE6F3F9BA2F937A1677ED03547EEDF2B7F3"
+    },
+    {
+        "archivo":  "caminar2.png",
+        "Hash":  "548F1DB0EDEFB5262D026486428DF0E25C3FA9A3F7E25BFD82C5D86B3C8C8EFC"
+    },
+    {
+        "archivo":  "caminar3.png",
+        "Hash":  "65FD6DE49FF0B37B0A4ECD2E530BA38FA2AC67586FAF3F9B9C7AD3B46038584B"
+    },
+    {
+        "archivo":  "caminar4.png",
+        "Hash":  "203F1D9615C9662C9E28F8FE2092B3F1D7AF917948B85467DC489ADED08F9FEB"
+    },
+    {
+        "archivo":  "cola-nueva.png",
+        "Hash":  "46154F90041D0183EF361B87F2FA47C47262D291506F72FBF686745CCD3D6161"
+    },
+    {
+        "archivo":  "cola.png",
+        "Hash":  "FF16826712E7752857BA5E864CAAB3F8E2E50852E229A23BD5AECA8FE67E92BD"
+    },
+    {
+        "archivo":  "colgar1.png",
+        "Hash":  "590F98D5BF70AA0CD909C48515CED77FBA25B8D5F254FFE3DE14A37D355ECA37"
+    },
+    {
+        "archivo":  "colgar2.png",
+        "Hash":  "4A40AE4EB5825ED4FC6FB55C7A8B5D2B4A423CD94783D36AA5306928609602A1"
+    },
+    {
+        "archivo":  "colgar3.png",
+        "Hash":  "A822C8924FCC508DF58FE6D1510D9BF69DFEC5D7C1C924ED69484C13C896F52F"
+    },
+    {
+        "archivo":  "colgar4.png",
+        "Hash":  "3BE3A6B76E26B6A6988DCCBF68CF6A986509258AF6F5CE8F3175D22A26447802"
+    },
+    {
+        "archivo":  "comer1.png",
+        "Hash":  "F221FF4CCAA8DC73F2915079F638F1F888C5AE2A2B5B1F9938C23FF2AB210BF7"
+    },
+    {
+        "archivo":  "comer2.png",
+        "Hash":  "A92126EA3422BEDAA6E4B7B62FA71634F6FDC5FB0B5821AC0295C5D874A8A56E"
+    },
+    {
+        "archivo":  "comer3.png",
+        "Hash":  "7A6FCF9B730343A9EC2428818DFF4596041F9ED9E9E147CA09420F8843A6CF57"
+    },
+    {
+        "archivo":  "comer4.png",
+        "Hash":  "1D4C28B9A1A027904EDC8EDF6ECE6C87447EC313D120827CB88B28D1B20E92C2"
+    },
+    {
+        "archivo":  "contento.png",
+        "Hash":  "E7665F23FC71123368421699CF200E1E2311E6B22697B1EA3C90828694304EF3"
+    },
+    {
+        "archivo":  "correr1.png",
+        "Hash":  "DF6570FFE14795E5E2DF188E954599E4D5F4C096C8CBF8DB53680703E082EBBB"
+    },
+    {
+        "archivo":  "correr2.png",
+        "Hash":  "A11D6DB6BB2B3836022B6AF07091594E7BC642623D3DD98465633EBD3194F8EA"
+    },
+    {
+        "archivo":  "correr3.png",
+        "Hash":  "F0F8B40EE48AD8E3B330B07A36C59D2559B54D0A4EDA133B8906E3008C4DDA5E"
+    },
+    {
+        "archivo":  "correr4.png",
+        "Hash":  "C60A7C7865D81382C21C9993A6BFDB02F7EC4F698E2C174EE2E002A5B4666E7E"
+    },
+    {
+        "archivo":  "croquetas1.png",
+        "Hash":  "4F03DB73EC386A524A51C43111C2A2B6DCB9CBD7C6619D58D605F481E726544D"
+    },
+    {
+        "archivo":  "croquetas2.png",
+        "Hash":  "726F5EA91F6252B95B9732AB05CFB2E43DE8000C72E8D8F36216BFBE1897A5FF"
+    },
+    {
+        "archivo":  "croquetas3.png",
+        "Hash":  "CC3F43532E77FCB79E1E3101503CEAB290DAEB24FC9A9AB54CA4256F6BBB36BC"
+    },
+    {
+        "archivo":  "croquetas4.png",
+        "Hash":  "680888A67DE4FEB535124251D60BAF15DA01E42D39A2DB796BD06CCF2A29493B"
+    },
+    {
+        "archivo":  "cuenco-lleno.png",
+        "Hash":  "8319772BE625433B93941136F3571464B232F3778B35C51793D5EFC4A16D8286"
+    },
+    {
+        "archivo":  "cuenco-vacio.png",
+        "Hash":  "234AC2DC29C8BE7DD9352D5442182099E463E5646A680851BDB6F2A3918D1DB8"
+    },
+    {
+        "archivo":  "despertar1.png",
+        "Hash":  "8CB958B1C74BBA00ED00006B4EF9F2D1D1E3A3642947ACEB197207FBE3C90B7E"
+    },
+    {
+        "archivo":  "despertar2.png",
+        "Hash":  "5AFFFCF82BF20FE0585906D2CC586C62B5A9F8215E6D8963753FC9FB1D2D870C"
+    },
+    {
+        "archivo":  "dormir1.png",
+        "Hash":  "621275015B9A38275B6793618FE5A8968C8DF5EBC9E43771553FE4E5CB5741EE"
+    },
+    {
+        "archivo":  "duda.png",
+        "Hash":  "ED93154B9BF2C260E851B3C5803CFBAA322F50B764E202BBBBB55E1DA9A6BB80"
+    },
+    {
+        "archivo":  "durmiendo.png",
+        "Hash":  "AA712C3C42F1EE190D91C87D526B85F0E41C1D8F4E37F39CEEEC1C638CCCC90D"
+    },
+    {
+        "archivo":  "empujar1.png",
+        "Hash":  "74DC25508F6BAD2CA0E7F69BECF4D8F539F514193A3BFB43FB5B98325219978C"
+    },
+    {
+        "archivo":  "empujar2.png",
+        "Hash":  "CFE901D6E94C744D24FE2F43BCF2FA091D0D534D6F1197FA084CB02936530FA7"
+    },
+    {
+        "archivo":  "empujar3.png",
+        "Hash":  "902D451DCDD389AF77191A97CEC4DC9B6174DBF1FBF2AB97E264A215AA306439"
+    },
+    {
+        "archivo":  "empujar4.png",
+        "Hash":  "107806CB8ABBE19630AF8F0D6089E78319748CC6AC1F0FFF74617495C7EDE5D7"
+    },
+    {
+        "archivo":  "espaldas1.png",
+        "Hash":  "789DB388685FF00B4B908FF885AF3C06EFD731B91880A156FF8305052E498145"
+    },
+    {
+        "archivo":  "espaldas2.png",
+        "Hash":  "CD92BEB4CC1B05BA094AC493CC2B16EC7EA5DE335D70F2235C995713AD507882"
+    },
+    {
+        "archivo":  "estirar-nuevo.png",
+        "Hash":  "B377B9B6085966C055BFCFC26F774859DA84C5202407CD73AF5FB65DEFE77D49"
+    },
+    {
+        "archivo":  "estirarse.png",
+        "Hash":  "ADDFE8BDE7B14B582CE03DCBAC609AA2DA5BEB03EB9FE711876455010332F55C"
+    },
+    {
+        "archivo":  "frenar1.png",
+        "Hash":  "ECD08C8758C753703BADA9DC159826F82663441DF654C72F2B7A7AFA336A6CE8"
+    },
+    {
+        "archivo":  "frenar2.png",
+        "Hash":  "8C92A2FEE4ADFEA62D3B61836E90A2114762C517539BCC25E608AB60C5051CE4"
+    },
+    {
+        "archivo":  "frenar3.png",
+        "Hash":  "421DF8DC44509096A7E18C92E29F3A8B08CF9642714DE411E900AB88190B733B"
+    },
+    {
+        "archivo":  "girar1.png",
+        "Hash":  "CA0D7236F3336BDF63DF82229F035F0D65BB3B93B3AE3F3A5EAD7EFA17C1F4E6"
+    },
+    {
+        "archivo":  "girar2.png",
+        "Hash":  "835223A9542A4421666B30A3312050B207F3480313EA1C43FE220212DAC5B906"
+    },
+    {
+        "archivo":  "girar3.png",
+        "Hash":  "E3AC6B19B46A81A6FEDB4B458C48125DFF35984D96A0F37A1A6C3C3A68904AA2"
+    },
+    {
+        "archivo":  "incorporar1.png",
+        "Hash":  "700147EDABE30785AB1A25C98AE1185B971086F2E2C8DBE6579C2833B03ABD6C"
+    },
+    {
+        "archivo":  "incorporar2.png",
+        "Hash":  "11DA0462BD5B3F3114D58DE916C97420E150F5F945444168F41CDD1C95FAA6B9"
+    },
+    {
+        "archivo":  "lamer1.png",
+        "Hash":  "DFFB961EFC782074BC56194D61D7B10397E5B04C0EEF876799547E18C600C5C0"
+    },
+    {
+        "archivo":  "lamer2.png",
+        "Hash":  "A6A128A88D608C1D6263F653850F5E6951BB9AF9B1B481213E5215B05A9C9A05"
+    },
+    {
+        "archivo":  "lamer3.png",
+        "Hash":  "52377B6807A72E2F53CA57B3265006E4D21D6ECDA0E51F90D0874F22DB40C6BB"
+    },
+    {
+        "archivo":  "leche1.png",
+        "Hash":  "29D86C900C32E04B6B9BCC6C8BA088A72C1B49868519D7D12AD6279D5F34A030"
+    },
+    {
+        "archivo":  "leche2.png",
+        "Hash":  "4CA9A751D8EB3CDAC76A8D162C38D084A0022F30BE7D5150C75FEF9CFA54BB65"
+    },
+    {
+        "archivo":  "leche3.png",
+        "Hash":  "14B97DBFEC7A9F02429634FE1487AF3AD7899A681EDD06B50B395CE74ED7613E"
+    },
+    {
+        "archivo":  "leche4.png",
+        "Hash":  "2941C6B9A2EC2FDEF9F373E192C42CA469693FB885C1B4AE7EDE00C3BFCBF2E8"
+    },
+    {
+        "archivo":  "listo.png",
+        "Hash":  "57EA487F859C6B6C78E5A413D97775AD9FC83BAA03A981F3A9BD7AADECB838CB"
+    },
+    {
+        "archivo":  "maullar1.png",
+        "Hash":  "AAE7C349BE306D8BDB8E67511EEE0BDFBDE13349E1843403D4BABC06F7B5FC6D"
+    },
+    {
+        "archivo":  "maullar2.png",
+        "Hash":  "E2D4CB17D7107B46FA753065CD9B8B22564942822193139808B1B7C66EC7D3AD"
+    },
+    {
+        "archivo":  "mirar1.png",
+        "Hash":  "38508C81CFD9E829CCD073308C51288BF2F503B1AC9BC06EEFA9E11BBB4E23CA"
+    },
+    {
+        "archivo":  "mirar2.png",
+        "Hash":  "66DEC684EBBB59B86868A5147D12EDF63A04E118C566C64DEE287E2952A230A0"
+    },
+    {
+        "archivo":  "ovillo1.png",
+        "Hash":  "787543B3C33B4A92E96D23A27BFD17AEE385F8DC6E4F1057BBAA7095103476C8"
+    },
+    {
+        "archivo":  "ovillo2.png",
+        "Hash":  "793AC81A1B9FC6C13ECE090780C5B5197AD07183943F1BE0D55F1792CE6B7E0D"
+    },
+    {
+        "archivo":  "ovillo3.png",
+        "Hash":  "75B220AE1D44DF289F762D535FA264949A0D780CA262415FD4C57CB69071C3F5"
+    },
+    {
+        "archivo":  "panza1.png",
+        "Hash":  "70909E98F9DA945158F21A733C78ACD6E331F86B61CD2A5B87E0DE7B73596E44"
+    },
+    {
+        "archivo":  "panza2.png",
+        "Hash":  "05403F9F1D9F6AFE30F951DF0BF9AE0AAE5549AFCBCAFF510E1CF0E23F139671"
+    },
+    {
+        "archivo":  "parado.png",
+        "Hash":  "FE29535D2CC09DA60515BDDB9036C9D90086AE69F2ED670A1CA588E0C1E8BF5D"
+    },
+    {
+        "archivo":  "pared1.png",
+        "Hash":  "F56B375089742CEDD30CA42E1365E8540D3F85951516DE00BB42127B856AC4FF"
+    },
+    {
+        "archivo":  "pared2.png",
+        "Hash":  "7CE818504982AEA15EB1A7A21D9475FEA0B9135B329CF91B14AFF029C1DD98F9"
+    },
+    {
+        "archivo":  "pared3.png",
+        "Hash":  "9721A27C31F846F7ECB433C526BCA3D11B37D01E4CBBF825B35F2B72E0049306"
+    },
+    {
+        "archivo":  "pared4.png",
+        "Hash":  "AD82A59F7C737F7B24588E4B7257096E3C2F57833F079015983BF473BD45368B"
+    },
+    {
+        "archivo":  "parpadeo1.png",
+        "Hash":  "DAB875EE40CD5D3606F352843F39CFEE97F42EBD1CB8BED623DA6F7958E73CD5"
+    },
+    {
+        "archivo":  "parpadeo2.png",
+        "Hash":  "6DCAE5C4F9E5B77163F001419F97F31EBE9708B122C78175B2163E3353528BC1"
+    },
+    {
+        "archivo":  "pata1.png",
+        "Hash":  "8C3261D9562EB8A71E984B3F45A8290ACB79D3A71288B38BFD18CEB97D6E20E8"
+    },
+    {
+        "archivo":  "pata2.png",
+        "Hash":  "274B97913106F472B7A752BFDA4F0B890C18F3B3376365243A639BAD19EAEBED"
+    },
+    {
+        "archivo":  "pedir1.png",
+        "Hash":  "0B6BBD3E50CC20926D3C8B3C1C35D67A472B76E4D972D1A68BE5262A99DB6C9E"
+    },
+    {
+        "archivo":  "pedir2.png",
+        "Hash":  "C8DD0BC2282B59CE5411649967CC0FD1610C610B9397779F67DD17B706F49B74"
+    },
+    {
+        "archivo":  "pensar1.png",
+        "Hash":  "7B10BABCC39B4B43AA60A14DF7E586EB972C218CCA442F52B767AE6E1DB19698"
+    },
+    {
+        "archivo":  "pensar2.png",
+        "Hash":  "3DB4ACEED1E19AE8B202C25A3B2EC11C20968054578A83755B7F68D53F02EB1E"
+    },
+    {
+        "archivo":  "pensar3.png",
+        "Hash":  "4864A2AAA766BE15F495A1B98EE8BD0F6539DFCE92E0C42CA738CFD0DE3F115C"
+    },
+    {
+        "archivo":  "pensar4.png",
+        "Hash":  "476DB81ECFEDB48A2E7B80E4C42647C1EB1446C95382DCE3DAABA238E8C7BFB0"
+    },
+    {
+        "archivo":  "pensar5.png",
+        "Hash":  "2468152FB8DDC69C8323D70902F32EEC3E948CF797B20DB366416A0D9F1F8139"
+    },
+    {
+        "archivo":  "pensar6.png",
+        "Hash":  "106A13E1018929B6C4ADA785D5D5F8EDA4E7288FF93DE66D808E32762FD1C4B4"
+    },
+    {
+        "archivo":  "pensar7.png",
+        "Hash":  "E316E1BA92EEE9A4C02E1984BBE4B8607C3EFD83083DE0206A4B0E723BA9FB75"
+    },
+    {
+        "archivo":  "pensar8.png",
+        "Hash":  "52652E280EBB7909718968E69AC25E5AEA16F04DC397F110AF63959AB8810B3F"
+    },
+    {
+        "archivo":  "pescado1.png",
+        "Hash":  "EB3CCFC660C4F6CF610498AEBCBA91D9D41B94AACB8D20CBCC48AD87CABD78C2"
+    },
+    {
+        "archivo":  "pescado2.png",
+        "Hash":  "A244B5C72CBE390DBDDAED8C27C1591DEF67B2AFEAA34680E9E05FEDBC6B1F5B"
+    },
+    {
+        "archivo":  "pescado3.png",
+        "Hash":  "3E4DD2D6161A82CDBF9AB01C63225B0B3256A37A7A4BA330239830924B25CBB2"
+    },
+    {
+        "archivo":  "pescado4.png",
+        "Hash":  "5130F1C4780B56ED05815D2BD3C89390FAE25CDCD00433D35439F10D428CEBB2"
+    },
+    {
+        "archivo":  "rascar1.png",
+        "Hash":  "84801F8B42F8C7E950DBEDA2233F16468CC712B6AEE2637A415CDFB400CD877B"
+    },
+    {
+        "archivo":  "rascar2.png",
+        "Hash":  "66F8BB98A35AC42500017478FE05327EB97861056401A69AADAAE1B23F1B0451"
+    },
+    {
+        "archivo":  "rascar3.png",
+        "Hash":  "7794D99DAA7D4DFA30E502482CBC489A40769FDD742CDA5C99F1C60C0C689C9E"
+    },
+    {
+        "archivo":  "rascar4.png",
+        "Hash":  "F8BA71DE33D52395882E6D08FDB55EE2CBF6502182D0E4449134672599FD1EBB"
+    },
+    {
+        "archivo":  "raton1.png",
+        "Hash":  "701C566A7CE22FC976D1B42BA0B722D323AA87C954596F8D24FC7951063DCE78"
+    },
+    {
+        "archivo":  "raton2.png",
+        "Hash":  "69193BA1EC3419E9842445807023810D62DA0E6F2B6586643CE38C0495ECFB6E"
+    },
+    {
+        "archivo":  "raton3.png",
+        "Hash":  "5A6F194F6CE003738AEC6E94F1B693CCAECC0A823D107E864DFA8A5E5563BB2A"
+    },
+    {
+        "archivo":  "raton4.png",
+        "Hash":  "372E061D98633D17DE1516A0AE2AA1ED95C330059D289454EFB3C39806221369"
+    },
+    {
+        "archivo":  "respirar1.png",
+        "Hash":  "158ECB3858B0F9763D2A144927870D017A666BFB9E676E4BBA5C76CB73289B56"
+    },
+    {
+        "archivo":  "respirar2.png",
+        "Hash":  "4274C18CC4CD82D6652D0C7FF5FC244CB97983E8E7443E77B4169A3866AA5FC4"
+    },
+    {
+        "archivo":  "respirar3.png",
+        "Hash":  "09EA4D39D6A99C41A4424CF4B6FE812EF4622E856871C5DF5D0E69FA53BA59FA"
+    },
+    {
+        "archivo":  "ronronear1.png",
+        "Hash":  "E7024BAB365952936C8541952948BDD56B1E07E1039DAF10B93D160A5312FDF1"
+    },
+    {
+        "archivo":  "ronronear2.png",
+        "Hash":  "2A86D324B0F20F1F1E872D9F94F588B2BD1C3DC60FF6C43AB63E89736AA7EA62"
+    },
+    {
+        "archivo":  "salto1.png",
+        "Hash":  "31284EC8858D2F83408D2222EEF29FDC9A1D74BAC77FEF965BAE571019D92E6F"
+    },
+    {
+        "archivo":  "salto2.png",
+        "Hash":  "103C0EAE92478964543B74308AE9A414CD4118802093C4B869028E83B03B089E"
+    },
+    {
+        "archivo":  "salto3.png",
+        "Hash":  "26EB6D2B51BF555724BBA8AACB46019B8735BA478AE84E068BA36EBDE0F58976"
+    },
+    {
+        "archivo":  "saludar1.png",
+        "Hash":  "94C396560EC23788FB83C0D320F31E6D97C6CB55B3FB17A51A516259CF7E3ABF"
+    },
+    {
+        "archivo":  "saludar2.png",
+        "Hash":  "51E2D2082AF3B0E584C65EE6C530A720E2D44328AE68DF2103CF47DEB7CD47A2"
+    },
+    {
+        "archivo":  "sentado.png",
+        "Hash":  "00C25BF46216D217D6248AC229EABBA1380F0C355BD46DE5773AD01B39DECEF4"
+    },
+    {
+        "archivo":  "sentarse1.png",
+        "Hash":  "0AFB54F9DD031647B0DCB9D439F63D047E3E5E5D09D78762070FDC5FAD376A2E"
+    },
+    {
+        "archivo":  "sentarse2.png",
+        "Hash":  "7E66FB0C61FB09AFC900BBFD95E50D4137CA55C5E979BE58ECA8053E5C7971B2"
+    },
+    {
+        "archivo":  "sentarse3.png",
+        "Hash":  "443F9AD9D9F92D0308A37CC440EE3887C3329F6D86569BE0865EB2697383F984"
+    },
+    {
+        "archivo":  "sueno.png",
+        "Hash":  "A36501C9F3A04ED14B43957B7D09ACB571A640C7157B230931DC402433315DFB"
+    },
+    {
+        "archivo":  "tablet.png",
+        "Hash":  "FD36436E48788BE52F34E82F0D86506033A74A03AB372F479DE40445F076B5A1"
+    }
+]

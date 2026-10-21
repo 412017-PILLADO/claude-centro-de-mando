@@ -3,3 +3,9 @@ ventana/icono.ico
 plugin/.claude-plugin/types/
 *.log
 .DS_Store
+
+# Notas de trabajo locales (no son parte del producto)
+ventana/VERIFICACION-*.txt
+ventana/arte/hashes-antes-*.json
+ventana/diseno/pruebas-finales.txt
+ventana/diseno/frontend-design.SKILL.md

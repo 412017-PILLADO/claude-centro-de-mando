@@ -1,0 +1,32 @@
+{
+  "archivo": "arte/gatito-hoja-10.png",
+  "filas": [
+    3,
+    4,
+    2
+  ],
+  "nombres": [
+    "cabecear1",
+    "cabecear2",
+    "cabecear3",
+    "empujar1",
+    "empujar2",
+    "empujar3",
+    "empujar4",
+    "panza1",
+    "panza2"
+  ],
+  "escalarComo": {
+    "propio": "cabecear1",
+    "referencia": "parado"
+  },
+  "limpiarAlfa": 180,
+  "sobrescribirSolo": [
+    "panza1",
+    "panza2"
+  ],
+  "escalarPorCuadro": {
+    "panza1": "sentado",
+    "panza2": "sentado"
+  }
+}
