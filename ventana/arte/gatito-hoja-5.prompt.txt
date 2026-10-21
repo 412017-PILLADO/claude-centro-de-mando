@@ -1,0 +1,5 @@
+Herramienta: imagegen (integrada), fondo transparente.
+Referencia: gatito-hoja-3.webp.
+Destino: gatito-hoja-5.png.
+
+Create a transparent PNG sprite sheet for this exact black pixel art chibi cat, yellow eyes pink inner ears, facing right, same style and body proportions as reference. 13 separate drawings well spaced in five rows: row 1 four frames eating from a bowl; row 2 two standalone bowls empty and full; row 3 two frames purring with pink hearts; row 4 two frames asking for food beside bowl; row 5 three frames playing with a yarn ball. No text no labels. Each drawing isolated with generous transparent space, no overlap. Preserve pixel art edges.

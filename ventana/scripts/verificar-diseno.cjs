@@ -1,0 +1,22 @@
+﻿const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto'),assert=require('node:assert/strict');
+const raiz=path.join(__dirname,'..'),dir=path.join(raiz,'diseno');
+const rgb=h=>h.replace('#','').match(/../g).map(v=>parseInt(v,16));
+const sobre=(a,b,op)=>a.map((v,i)=>v*op+b[i]*(1-op));
+const lum=a=>a.map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4}).reduce((s,v,i)=>s+v*[.2126,.7152,.0722][i],0);
+const contraste=(a,b)=>(Math.max(lum(a),lum(b))+.05)/(Math.min(lum(a),lum(b))+.05);
+const blanco=[255,255,255],liviano=sobre(blanco,sobre([22,26,38],blanco,.72),.1),fuerte=sobre(blanco,sobre([18,22,32],blanco,.84),.1),seccion=sobre([18,22,32],fuerte,.84);
+const filas=[];
+function medir(nombre,texto,fondo){const ratio=contraste(rgb(texto),fondo);assert.ok(ratio>=4.5,nombre+' '+ratio);filas.push('| '+nombre+' | '+texto+' | rgb('+fondo.map(v=>v.toFixed(2)).join(', ')+') | '+ratio.toFixed(2)+':1 |')}
+medir('Globos, menú y etiquetas (reflejo máximo)','#f0f2fa',liviano);
+for(const [nombre,c] of Object.entries({Principal:'#f0f2fa',Secundario:'#d4dbea',Tenue:'#c5cee0'}))medir(nombre+' en tarjeta/panel',c,fuerte);
+for(const [nombre,c] of Object.entries({Lila:'#c2b5f5',Ámbar:'#efc36f',Error:'#f29b9b',Menta:'#a5e5c8'}))medir(nombre+' en secciones',c,seccion);
+for(const c of ['#f0f2fa','#d4dbea','#c5cee0','#c2b5f5','#efc36f','#f29b9b'])medir('Texto/control en hover',c,rgb('#303645'));
+medir('Texto de acción y filtro activo','#161a26',rgb('#c2b5f5'));
+const tabla='| Uso | Texto | Peor fondo (escritorio blanco) | Contraste |\n|---|---|---|---:|\n'+filas.join('\n');
+fs.writeFileSync(path.join(dir,'contraste.md'),'# Contraste WCAG\n\nComposición alfa en sRGB; escritorio blanco, reflejo blanco al 10% en su máximo. El escritorio negro produce mayor contraste. Acentos de texto sólo sobre secciones tintadas; vidrio liviano siempre usa texto principal. No se reduce la opacidad del texto.\n\n'+tabla+'\n');
+const antes=JSON.parse(fs.readFileSync(path.join(dir,'hashes-sprites-antes.json'),'utf8').replace(/^\uFEFF/,''));
+const despues=antes.map(({archivo})=>({archivo,Hash:crypto.createHash('sha256').update(fs.readFileSync(path.join(raiz,'src/ui/sprites',archivo))).digest('hex').toUpperCase()}));
+const cambios=despues.filter((r,i)=>r.Hash!==antes[i].Hash);assert.deepEqual(cambios.map(r=>r.archivo).sort(),['panza1.png','panza2.png']);
+fs.writeFileSync(path.join(dir,'hashes-sprites-despues.json'),JSON.stringify(despues,null,2)+'\n');
+const informe={total:antes.length,intactos:antes.length-cambios.length,cambios:cambios.map(r=>({archivo:r.archivo,antes:antes.find(a=>a.archivo===r.archivo).Hash,despues:r.Hash}))};fs.writeFileSync(path.join(dir,'verificacion-hashes.json'),JSON.stringify(informe,null,2)+'\n');
+console.log(tabla);console.log(JSON.stringify(informe,null,2));

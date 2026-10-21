@@ -1,0 +1,7 @@
+{
+ "archivo":"arte/gatito-hoja-7.png",
+ "filas":[3,3,3,3],
+ "nombres":["arrancar1","arrancar2","arrancar3","frenar1","frenar2","frenar3","agachar1","agachar2","agachar3","respirar1","respirar2","respirar3"],
+ "escalarComo":{"propio":"arrancar1","referencia":"sentado"},
+ "limpiarAlfa":180
+}

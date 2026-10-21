@@ -2,9 +2,10 @@
 <html lang="es">
   <head>
     <meta charset="utf-8" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'" />
     <title>Centro de mando</title>
     <link rel="stylesheet" href="estilos.css" />
+    <link rel="stylesheet" href="tokens.css" />
   </head>
   <body>
     <div id="app" class="app">
@@ -12,44 +13,67 @@
 
       <div id="panel" class="panel">
         <div id="panel-contenido">
-        <section class="seccion" data-seccion="reuniones">
-          <div class="seccion-titulo">
-            <svg viewBox="0 0 24 24"><path d="M4 6h16v14H4zM4 10h16M8 3v4M16 3v4" /></svg>
-            <span>Reuniones</span>
-            <button id="btn-probar" class="boton-chico" title="Simula una reunión que empieza en 5 minutos">Probar alerta</button>
-            <span id="cuenta-reuniones" class="cuenta"></span>
-            <svg class="flecha" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" /></svg>
+        <nav class="riel" aria-label="Vistas">
+          <button id="vista-centro" title="Centro" aria-label="Centro">▦</button>
+          <button id="vista-ajustes-btn" title="Ajustes" aria-label="Ajustes">⚙</button>
+        </nav>
+        <div id="vista-trabajo">
+        <section id="sin-fuentes" class="bloque sin-fuentes" hidden>
+          <h2>Solo el gatito</h2>
+          <p class="subtitulo">No hay conexiones activas. Con Claude Code y sus conectores podés sumar tus sesiones, reuniones y tickets desde Ajustes.</p>
+        </section>
+        <section class="bloque seccion" data-seccion="reuniones">
+          <div class="encabezado">
+            <span class="icono-caja" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 6h16v14H4zM4 10h16M8 3v4M16 3v4" /></svg></span>
+            <div class="titulo-texto"><h2>Reuniones</h2><p id="sub-reuniones" class="subtitulo" hidden></p></div>
+            <details class="mas-seccion"><summary class="boton-circulo" aria-label="Más opciones de reuniones">•••</summary><button id="btn-probar" class="boton-chico">Probar alerta</button></details>
+            <button class="seccion-titulo pastilla-plegar" aria-label="Plegar Reuniones" aria-expanded="true" aria-controls="cuerpo-reuniones" title="Plegar">
+              <span id="cuenta-reuniones" class="cuenta"></span>
+              <svg class="flecha" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+            </button>
           </div>
-          <div class="seccion-cuerpo" id="reuniones"></div>
+          <div class="plegable" id="cuerpo-reuniones"><div class="plegable-int"><div class="seccion-cuerpo" id="reuniones"></div></div></div>
         </section>
 
-        <section class="seccion" data-seccion="tickets">
-          <button class="seccion-titulo">
-            <svg viewBox="0 0 24 24"><path d="M3 9a3 3 0 0 0 0 6v3a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-3a3 3 0 0 1 0-6V6a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1zM14 5v14" /></svg>
-            <span>Mis tickets</span>
-            <span id="cuenta-tickets" class="cuenta"></span>
-            <svg class="flecha" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" /></svg>
-          </button>
-          <div class="seccion-cuerpo">
-            <div id="filtros" class="filtros"></div>
-            <div id="tickets"></div>
+        <section class="bloque seccion" data-seccion="tickets">
+          <div class="encabezado">
+            <span class="icono-caja" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 9a3 3 0 0 0 0 6v3a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-3a3 3 0 0 1 0-6V6a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1zM14 5v14" /></svg></span>
+            <div class="titulo-texto"><h2>Mis tickets</h2><p id="sub-tickets" class="subtitulo" hidden></p></div>
+            <button class="seccion-titulo pastilla-plegar" aria-label="Plegar Mis tickets" aria-expanded="true" aria-controls="cuerpo-tickets" title="Plegar">
+              <span id="cuenta-tickets" class="cuenta"></span>
+              <svg class="flecha" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+            </button>
           </div>
+          <div class="plegable" id="cuerpo-tickets"><div class="plegable-int"><div class="seccion-cuerpo">
+              <div id="filtros" class="filtros"></div>
+              <div id="tickets"></div>
+            </div></div></div>
         </section>
 
-        <section class="seccion" data-seccion="sesiones">
-          <button class="seccion-titulo">
-            <svg viewBox="0 0 24 24"><path d="M4 5h16v11H4zM8 20h8M12 16v4" /></svg>
-            <span>Sesiones de Claude</span>
-            <span id="cuenta-sesiones" class="cuenta"></span>
-            <svg class="flecha" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" /></svg>
-          </button>
-          <div class="seccion-cuerpo" id="sesiones"></div>
+        <section class="bloque seccion" data-seccion="sesiones">
+          <div class="encabezado">
+            <span class="icono-caja" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H4zM8 20h8M12 16v4" /></svg></span>
+            <div class="titulo-texto"><h2>Sesiones de Claude</h2><p id="sub-sesiones" class="subtitulo" hidden></p></div>
+            <button class="seccion-titulo pastilla-plegar" aria-label="Plegar Sesiones de Claude" aria-expanded="true" aria-controls="cuerpo-sesiones" title="Plegar">
+              <span id="cuenta-sesiones" class="cuenta"></span>
+              <svg class="flecha" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+            </button>
+          </div>
+          <div class="plegable" id="cuerpo-sesiones"><div class="plegable-int"><div class="seccion-cuerpo" id="sesiones"></div></div></div>
+        </section>
+        </div>
+        <section id="vista-ajustes" class="bloque ajustes" aria-labelledby="titulo-ajustes" hidden>
+          <h1 id="titulo-ajustes">Ajustes</h1>
+          <p id="bienvenida" class="subtitulo" hidden>¡Hola! Elegí cómo es tu gatito y qué querés que te muestre. Lo podés cambiar cuando quieras desde la bandeja.</p>
+          <div id="ajustes-cuerpo"></div>
+          <button id="ajustes-listo" class="boton-listo">Listo</button>
         </section>
         </div>
       </div>
 
       <div id="agarre-ancho" class="agarre-ancho" title="Arrastrá para cambiar el ancho · doble clic: tamaño automático"></div>
     </div>
+    <script src="secciones.js"></script>
     <script src="app.js"></script>
   </body>
 </html>

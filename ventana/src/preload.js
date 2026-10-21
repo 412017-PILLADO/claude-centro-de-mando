@@ -1,6 +1,20 @@
 const { contextBridge, ipcRenderer } = require('electron')
 
 contextBridge.exposeInMainWorld('centro', {
+  abrirGatito: x => ipcRenderer.send('abrir-gatito', x),
+  posicionGatito: x => ipcRenderer.send('gatito-posicion', x),
+  reubicarCentro: x => ipcRenderer.send('reubicar-centro', x),
+  alReubicarCentro: callback => ipcRenderer.on('pedir-posicion-reubicar', () => callback()),
+  cruzarPantalla: lado => ipcRenderer.send('gatito-cruzar', lado),
+  arrastrarGatito: si => ipcRenderer.send('gatito-arrastre', si),
+  alRecibirArrastre: callback => ipcRenderer.on('gatito-arrastre', (_e, datos) => callback(datos)),
+  registrarGatito: entradas => ipcRenderer.send('gatito-registro', entradas),
+  cuidarGatito: (accion, valor) => ipcRenderer.send('gatito-accion', { accion, valor }),
+  cambiarConfig: cambios => ipcRenderer.send('config', cambios),
+  abrirAjustes: () => ipcRenderer.send('abrir-ajustes'),
+  alCambiarVista: callback => ipcRenderer.on('vista', (_e, vista) => callback(vista)),
+  descansoGatito: si => ipcRenderer.send('gatito-descanso', Boolean(si)),
+  alRecibirCuidado: callback => ipcRenderer.on('gatito-accion', (_evento, accion) => callback(accion)),
   alRecibirEstado: callback => ipcRenderer.on('estado', (_event, estado) => callback(estado)),
   pedirEstado: () => ipcRenderer.send('pedir-estado'),
   alRecibirAlerta: callback => ipcRenderer.on('alerta', (_event, id) => callback(id)),
@@ -20,5 +34,7 @@ contextBridge.exposeInMainWorld('centro', {
   alRecibirCentroVisible: callback => ipcRenderer.on('centro-visible', (_event, visible) => callback(visible)),
   alRecibirPedidoPosicion: callback => ipcRenderer.on('pedir-posicion', () => callback()),
   alRecibirDecir: callback => ipcRenderer.on('decir', (_event, mensaje) => callback(mensaje)),
+  menuRapido: si => ipcRenderer.send('menu-rapido', Boolean(si)),
+  alCerrarMenu: callback => ipcRenderer.on('cerrar-menu', callback),
   posicionMouse: () => ipcRenderer.invoke('posicion-mouse'),
 })

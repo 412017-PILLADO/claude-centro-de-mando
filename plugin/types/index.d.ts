@@ -31,7 +31,8 @@ export type Ticket = {
   url: string
 }
 
-export type Tickets = { items: Ticket[]; error: string | null; loadedAt: number | null; isLoading: boolean }
+/** `isOff`: la persona apagó Tickets en los Ajustes de la app; la sección no se muestra. */
+export type Tickets = { items: Ticket[]; error: string | null; loadedAt: number | null; isLoading: boolean; isOff?: boolean }
 
 export type Meeting = {
   id: string

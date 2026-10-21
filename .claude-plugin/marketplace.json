@@ -1,6 +1,13 @@
 {
   "name": "centro-de-mando",
-  "owner": { "name": "Mateo Pillado" },
-  "description": "Centro de mando para Claude Code: sesiones, tickets de Jira y reuniones de Google Calendar en un panel y una ventana flotante.",
-  "plugins": [{ "name": "centro-de-mando", "source": "./plugin" }]
+  "owner": {
+    "name": "Mateo Pillado"
+  },
+  "description": "Gatito de escritorio con centro de mando opcional para Claude Code: sesiones, reuniones y tickets con tus propios conectores.",
+  "plugins": [
+    {
+      "name": "centro-de-mando",
+      "source": "./plugin"
+    }
+  ]
 }

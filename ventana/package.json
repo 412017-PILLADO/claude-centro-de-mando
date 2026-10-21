@@ -1,11 +1,13 @@
 {
   "name": "centro-flotante",
-  "version": "0.2.0",
-  "description": "Ventana flotante del Centro de mando de Claude Code.",
+  "version": "0.9.0",
+  "description": "Gatito de escritorio y centro de mando (Electron, Windows y macOS).",
   "main": "src/main.js",
   "private": true,
   "scripts": {
     "start": "electron .",
+    "test": "node scripts/probar-config.cjs && node scripts/probar-fuentes.cjs && node scripts/probar-gatito.cjs && node scripts/verificar-interfaz.cjs",
+    "metricas": "node scripts/resumir-metricas.cjs",
     "acceso-directo": "node scripts/acceso-directo.js",
     "postinstall": "node scripts/descargar-electron.js && node scripts/acceso-directo.js",
     "descargar-electron": "node scripts/descargar-electron.js",

@@ -1,0 +1,7 @@
+{
+  "archivo": "arte/gatito-hoja-6.png",
+  "filas": [3, 3, 3, 3, 3, 3],
+  "nombres": ["incorporar1", "incorporar2", "parado", "sentarse1", "sentarse2", "sentarse3", "acostar1", "acostar2", "dormir1", "despertar1", "despertar2", "estirar-nuevo", "parpadeo1", "parpadeo2", "cola-nueva", "girar1", "girar2", "girar3"],
+  "escalarComo": {"propio": "incorporar1", "referencia": "sentado"},
+  "limpiarAlfa": 180
+}

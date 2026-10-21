@@ -1,0 +1,1 @@
+Built-in imagegen: edit parpadeo1.png. Change ONLY eyes to normal open yellow eyes. Preserve seated silhouette, tail behind, right orientation, pixel style and transparency. Single cell.
