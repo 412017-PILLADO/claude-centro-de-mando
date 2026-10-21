@@ -350,12 +350,99 @@ function manija(elemento, lado) {
 manija($('agarre-alto'), 'alto')
 manija($('agarre-ancho'), 'ancho')
 
+// --- ajustes ---------------------------------------------------------------
+// Misma ventana que el panel. La primera vez que se abre la app funciona como bienvenida.
+
+const COLORES_GATO = ['negro', 'gris', 'naranja', 'crema', 'siames', 'atigrado']
+// Fuente → [título, clave en conectores.json, nombre del conector en Claude]
+const FUENTES_AJUSTES = {
+  sesiones: ['Sesiones de Claude', null, 'el plugin de Claude Code'],
+  reuniones: ['Reuniones', 'calendario', 'Google Calendar'],
+  tickets: ['Mis tickets', 'jira', 'Jira (Atlassian)'],
+}
+let vista = 'panel'
+let claveAjustes = null
+
+function mostrarVista(nueva) {
+  vista = nueva === 'ajustes' ? 'ajustes' : 'panel'
+  $('vista-trabajo').hidden = vista !== 'panel'
+  $('vista-ajustes').hidden = vista !== 'ajustes'
+  $('vista-centro').setAttribute('aria-pressed', String(vista === 'panel'))
+  $('vista-ajustes-btn').setAttribute('aria-pressed', String(vista === 'ajustes'))
+  claveAjustes = null
+  pintar()
+}
+
+function interruptor(etiqueta, marcado, alCambiar, ayuda = '', clase = 'ajuste') {
+  const entrada = el('input', { type: 'checkbox', role: 'switch' })
+  entrada.checked = marcado
+  entrada.addEventListener('change', () => alCambiar(entrada.checked))
+  return el('label', { class: clase }, el('span', { class: 'crece' }, etiqueta, ayuda ? el('small', { text: ayuda }) : null), entrada)
+}
+
+function ayudaFuente(id, conectores) {
+  const [, clave, conector] = FUENTES_AJUSTES[id]
+  if (!conectores) return 'Abrí Claude Code una vez con el plugin para detectarla.'
+  if (clave && conectores[clave] !== true) return `Conectá ${conector} en Claude (Configuración › Conectores).`
+  return ''
+}
+
+function pintarAjustes({ config, conectores = null, gatito = {} }) {
+  if (!config) return
+  // No se redibuja mientras se escribe ni si nada cambió.
+  const clave = JSON.stringify({ config, conectores, nombre: gatito.nombre, color: gatito.color })
+  if (clave === claveAjustes || document.activeElement?.tagName === 'INPUT' && document.activeElement.type === 'text') return
+  claveAjustes = clave
+  const cambiar = cambios => api.cambiarConfig(cambios)
+  $('bienvenida').hidden = !config.primerUso
+  $('titulo-ajustes').textContent = config.primerUso ? 'Bienvenida' : 'Ajustes'
+
+  const nombre = el('input', { type: 'text', maxlength: '30', 'aria-label': 'Nombre del gatito' })
+  nombre.value = gatito.nombre || 'Michi'
+  nombre.addEventListener('change', () => api.cuidarGatito('nombre', nombre.value))
+  const colores = el('div', { class: 'colores-ajustes', role: 'group', 'aria-label': 'Color' },
+    COLORES_GATO.map(c => el('button', { class: `color-gato pelaje-${c}`, title: c, 'aria-label': c, 'aria-pressed': String(gatito.color === c), onclick: () => api.cuidarGatito('color', c) })))
+
+  const fuentes = Object.entries(FUENTES_AJUSTES).map(([id, [titulo]]) => {
+    const fila = [interruptor(titulo, config.fuentes[id].activa, v => cambiar({ [`fuentes.${id}.activa`]: v }), ayudaFuente(id, conectores))]
+    if (id === 'reuniones' && config.fuentes.reuniones.activa) fila.push(interruptor('Solo las de hoy', config.fuentes.reuniones.soloHoy, v => cambiar({ 'fuentes.reuniones.soloHoy': v }), '', 'ajuste sub'))
+    if (id === 'tickets' && config.fuentes.tickets.activa) {
+      const jql = el('input', { type: 'text', 'aria-label': 'Filtro de Jira (JQL)' })
+      jql.value = config.fuentes.tickets.jql
+      jql.addEventListener('change', () => cambiar({ 'fuentes.tickets.jql': jql.value }))
+      fila.push(el('details', { class: 'avanzado' }, el('summary', { text: 'Qué tickets traer (JQL)' }), jql))
+    }
+    return fila
+  })
+
+  $('ajustes-cuerpo').replaceChildren(
+    el('h2', { text: 'Tu gatito' }),
+    el('label', { class: 'ajuste' }, el('span', { class: 'crece', text: 'Nombre' }), nombre),
+    colores,
+    interruptor('Gatito en el escritorio', config.mascota.visible, v => cambiar({ 'mascota.visible': v })),
+    el('h2', { text: 'Conexiones' }),
+    el('p', { class: 'subtitulo', text: 'Se leen de tus conectores de Claude Code. Sin ninguna, el gatito funciona solo.' }),
+    ...fuentes.flat(),
+    el('h2', { text: 'Sistema' }),
+    interruptor('Abrir al iniciar la computadora', config.inicioAutomatico, v => cambiar({ inicioAutomatico: v })),
+    interruptor('Aceleración gráfica', config.aceleracionGrafica, v => cambiar({ aceleracionGrafica: v }), 'Puede verse más fluido, pero consume más. Se aplica al reiniciar la app.'),
+  )
+}
+
+$('ajustes-listo').onclick = () => {
+  if (ultimo?.config?.primerUso) api.cambiarConfig({ primerUso: false })
+  mostrarVista('panel')
+}
+$('vista-ajustes-btn').onclick = () => mostrarVista('ajustes')
+api.alCambiarVista(mostrarVista)
+
 // --- arranque --------------------------------------------------------------
 
 let ultimo = null
 
 function pintar() {
   if (!ultimo) return
+  if (vista === 'ajustes') return pintarAjustes(ultimo)
   const { ahora, sesiones, tickets, reuniones, errorReuniones, config = {}, fuentes = { sesiones: true, reuniones: true, tickets: true } } = ultimo
   for (const nombre of Object.keys(fuentes)) document.querySelector?.(`[data-seccion="${nombre}"]`)?.classList.toggle('sin-fuente', !fuentes[nombre])
   $('sin-fuentes').hidden = Object.values(fuentes).some(Boolean)
@@ -371,4 +458,4 @@ api.alRecibirEstado(estado => {
 api.pedirEstado()
 
 $('vista-centro').setAttribute('aria-pressed','true')
-$('vista-centro').onclick=()=>api.alto(altoCompleto())
+$('vista-centro').onclick=()=>{mostrarVista('panel');api.alto(altoCompleto())}

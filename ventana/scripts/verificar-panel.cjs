@@ -8,7 +8,7 @@ module.exports=raiz=>{
  }
  const nodos=new Map(),enviados=[];let recibir;
  const doc={getElementById(id){if(!nodos.has(id))nodos.set(id,new Nodo());return nodos.get(id)},createElement:()=>new Nodo(),createElementNS:()=>new Nodo(),createTextNode:t=>t};
- const api=new Proxy({},{get:(_,k)=>k==='alRecibirEstado'?f=>recibir=f:(...a)=>enviados.push([k,...a])});
+ const receptores={},api=new Proxy({},{get:(_,k)=>k==='alRecibirEstado'?f=>recibir=f:k.startsWith('al')?f=>receptores[k]=f:(...a)=>enviados.push([k,...a])});
  const ctx=vm.createContext({window:{centro:api},document:doc,Node:Nodo,Date,Math,console,localStorage:{getItem(){return null},setItem(){}},prepararSecciones(){},prepararPlegado(){},ResizeObserver:class{observe(){}},addEventListener(){}});
  vm.runInContext(fs.readFileSync(path.join(raiz,'app.js'),'utf8'),ctx);
  const ahora=Date.now(),r={id:'1',title:'Revisión',start:new Date(ahora+4*60000).toISOString(),end:new Date(ahora+40*60000).toISOString(),joinUrl:'https://example.com/reunion'};
@@ -26,6 +26,24 @@ module.exports=raiz=>{
   assert.deepEqual(nodos.get('filtros').children.map(b=>b.textContent),['Todos 3','Tarea por hacer 1','Pruebas de usuario 1','En curso 1'])
   nodos.get('filtros').children[2].events.click();assert.doesNotMatch(nodos.get('tickets').textContent,/B-2/);assert.match(nodos.get('tickets').textContent,/B-3/)
   nodos.get('filtros').children[0].events.click();recibir(estado)}
+ // Ajustes: bienvenida la primera vez, fuentes con su conector y cambios por config.
+ {const {POR_DEFECTO}=require(path.join(raiz,'../nucleo/config.js'))
+  const config=JSON.parse(JSON.stringify(POR_DEFECTO))
+  receptores.alCambiarVista('ajustes')
+  recibir({...estado,config,conectores:{version:1,jira:false,calendario:true},gatito:{nombre:'Mora',color:'gris'}})
+  assert.equal(nodos.get('vista-ajustes').hidden,false);assert.equal(nodos.get('vista-trabajo').hidden,true)
+  assert.equal(nodos.get('bienvenida').hidden,false)
+  const texto=nodos.get('ajustes-cuerpo').textContent
+  assert.match(texto,/Tu gatito.*Conexiones.*Sesiones de Claude.*Reuniones.*Solo las de hoy.*Mis tickets.*Conectá Jira.*Abrir al iniciar la computadora/)
+  assert.doesNotMatch(texto,/Conectá Google Calendar/)
+  const interruptores=buscar(nodos.get('ajustes-cuerpo'),'ajuste').map(l=>l.children.at(-1)).filter(n=>n.attrs?.type==='checkbox')
+  const tickets=buscar(nodos.get('ajustes-cuerpo'),'ajuste').find(l=>l.textContent.startsWith('Mis tickets')).children.at(-1)
+  tickets.checked=false;tickets.events.change();assert.equal(JSON.stringify(enviados.at(-1)),JSON.stringify(['cambiarConfig',{'fuentes.tickets.activa':false}]))
+  assert.ok(interruptores.length>=6)
+  buscar(nodos.get('ajustes-cuerpo'),'color-gato pelaje-naranja')[0].events.click();assert.deepEqual(enviados.at(-1),['cuidarGatito','color','naranja'])
+  nodos.get('ajustes-listo').onclick();assert.equal(JSON.stringify(enviados.at(-1)),JSON.stringify(['cambiarConfig',{primerUso:false}]))
+  assert.equal(nodos.get('vista-ajustes').hidden,true);assert.equal(nodos.get('vista-trabajo').hidden,false)
+  recibir(estado)}
  // Sin fuentes activas: se avisa que es solo el gatito; con alguna, el aviso se oculta.
  recibir({...estado,fuentes:{sesiones:false,reuniones:false,tickets:false}});assert.equal(nodos.get('sin-fuentes').hidden,false)
  recibir({...estado,fuentes:{sesiones:true,reuniones:false,tickets:false}});assert.equal(nodos.get('sin-fuentes').hidden,true)

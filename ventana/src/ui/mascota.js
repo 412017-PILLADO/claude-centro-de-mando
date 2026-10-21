@@ -560,6 +560,7 @@ $('ajustes-nombre').onchange=()=>api.cuidarGatito('nombre',$('ajustes-nombre').v
 $('ajustes-pausas').onchange=()=>api.cuidarGatito('pausas',$('ajustes-pausas').checked)
 $('ajustes-solo-hoy').onchange=()=>api.cambiarConfig({'fuentes.reuniones.soloHoy':$('ajustes-solo-hoy').checked})
 $('ajustes-cerrar').onclick=()=>{cerrarMenu();abrirMenu()}
+$('ajustes-mas').onclick=()=>{cerrarMenu();api.abrirAjustes()}
 for(const color of ['negro','gris','naranja','crema','siames','atigrado']){
  const b=document.createElement('button');b.className='pelaje-'+color;b.dataset.color=color;b.setAttribute('aria-label',color);b.onclick=()=>api.cuidarGatito('color',color);$('ajustes-colores').append(b)
 }

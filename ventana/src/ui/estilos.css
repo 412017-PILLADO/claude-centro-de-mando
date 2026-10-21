@@ -799,3 +799,27 @@ body.plegado .panel {
   .pastilla-plegar .flecha { transition: none; }
   .punto.working { animation: none; }
 }
+
+/* --- ajustes y bienvenida (misma ventana que el panel) -------------------- */
+.ajustes h1 { margin: 0 0 4px; font: 600 var(--texto-titulo)/1.3 var(--display); }
+.ajustes h2 { margin: 16px 0 6px; font-size: var(--texto-base); color: var(--tenue); text-transform: uppercase; letter-spacing: .04em; }
+.ajustes .subtitulo { margin: 0 0 8px; }
+.ajuste { display: flex; align-items: center; gap: 10px; padding: 6px 0; font-size: var(--texto-base); }
+.ajuste small { display: block; color: var(--muy-tenue); font-size: var(--texto-chico); margin-top: 2px; }
+.ajustes input[type=text] { flex: 0 1 220px; min-width: 0; border: 0; border-bottom: 1px solid var(--borde); background: transparent; color: var(--texto); font: inherit; padding: 4px 2px; }
+.ajustes input[type=text]:focus { border-color: var(--acento); outline: none; }
+.ajustes input[type=checkbox] { appearance: none; flex: none; width: 34px; height: 20px; border-radius: 999px; background: rgba(255,255,255,.14); border: 1px solid var(--borde); position: relative; cursor: pointer; }
+.ajustes input[type=checkbox]::after { content: ''; position: absolute; width: 14px; height: 14px; left: 2px; top: 2px; border-radius: 50%; background: var(--texto); transition: left .15s; }
+.ajustes input[type=checkbox]:checked { background: var(--acento); }
+.ajustes input[type=checkbox]:checked::after { left: 16px; background: var(--lila-texto); }
+.colores-ajustes { display: flex; gap: 8px; padding: 4px 0 6px; }
+.color-gato { width: 24px; height: 24px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; }
+.color-gato[aria-pressed=true] { border-color: var(--acento); }
+.color-gato.pelaje-negro { background: #242633; } .color-gato.pelaje-gris { background: #737a8c; } .color-gato.pelaje-naranja { background: #cd7837; }
+.color-gato.pelaje-crema { background: #e5d8b6; } .color-gato.pelaje-siames { background: radial-gradient(#dfcdaa, #58463e); }
+.color-gato.pelaje-atigrado { background: repeating-linear-gradient(65deg, #b57d44 0 5px, #61432c 5px 8px); }
+.avanzado { margin: 0 0 6px; font-size: var(--texto-chico); color: var(--tenue); }
+.avanzado summary { cursor: pointer; padding: 4px 0; }
+.avanzado input[type=text] { width: 100%; }
+.boton-listo { display: block; margin: 16px 0 0 auto; padding: 6px 18px; border-radius: 999px; border: 0; background: var(--acento); color: var(--lila-texto); font: 600 var(--texto-base) var(--display); cursor: pointer; }
+.ajuste.sub, .avanzado { padding-left: 16px; }

@@ -11,6 +11,8 @@ const SESIONES = path.join(CENTRO, 'sesiones')
 const vida = require('./gatito').crearVida(CENTRO)
 // Config de la app (config.json en la carpeta de la app); se crea al primer uso, cuando ya hay ruta.
 let configCreada = null
+// Las corridas de prueba (perfil aparte o capturas) no tocan el inicio automático real de la compu.
+const esPrueba = Boolean(process.env.CENTRO_PERFIL || process.env.CENTRO_CAPTURA)
 const config = () => (configCreada ??= require('./nucleo/config').crearConfig(app.getPath('userData')))
 // Las capturas y las mediciones usan su propio perfil para no cambiar los ajustes de la persona.
 if (process.env.CENTRO_PERFIL) {
@@ -22,7 +24,7 @@ if (process.env.CENTRO_PERFIL) {
   app.setPath('userData', perfil)
 }
 if (!config().get().aceleracionGrafica) app.disableHardwareAcceleration()
-const ATAJO = 'Control+Alt+Space'
+const ATAJO = 'CommandOrControl+Alt+Space'
 const SIN_SENAL_MS = 90_000 // el mod late cada 30 s
 const OLVIDAR_MS = 12 * 60 * 60 * 1000
 const ANCHO = 600
@@ -123,7 +125,7 @@ function armarEstado() {
   const contexto={reunion,alerta,trabajando:sesiones.some(s=>!s.sinSenal&&s.status==='working'),inactivoSeg:powerMonitor.getSystemIdleTime(),panel:ventana?.isVisible()||false,azar:Math.random()}
   if(typeof screen!=='undefined')contexto.bordes=bordesMascota()
   const observado=mascotaLista?vida.observar(contexto):{datos:vida.leer(),eventos:[]}
-  return {ahora,gatito:observado.datos,eventosGatito:observado.eventos,contextoGatito:contexto,sesiones,reuniones,errorReuniones:errorReuniones(),config:config().get(),fuentes,tickets:fuentes.tickets?leerJson(path.join(CENTRO,'tickets.json')):null}
+  return {ahora,gatito:observado.datos,eventosGatito:observado.eventos,contextoGatito:contexto,sesiones,reuniones,errorReuniones:errorReuniones(),config:config().get(),fuentes,conectores:leerJson(path.join(CENTRO,'conectores.json')),tickets:fuentes.tickets?leerJson(path.join(CENTRO,'tickets.json')):null}
 }
 
 // --- reuniones -----------------------------------------------------------
@@ -274,6 +276,8 @@ function crearMascota() {
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true },
   })
   mascota.setAlwaysOnTop(true, 'floating')
+  // En macOS, que siga visible al cambiar de escritorio o con una app en pantalla completa.
+  if (process.platform === 'darwin') mascota.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
   mascota.setIgnoreMouseEvents(true, { forward: true })
   mascota.webContents.once('did-finish-load',()=>{mascotaLista=true;enviarEstado()})
   mascota.loadFile(path.join(__dirname, 'ui', 'mascota.html'))
@@ -290,10 +294,21 @@ function crearMascota() {
   })
 }
 
-function alternarMascota(visible) {
-  config().set({ 'mascota.visible': visible })
-  if (visible) crearMascota()
-  else mascota?.destroy()
+// La config manda: prender o apagar el gatito y el inicio automático se aplican al cambiarla.
+function aplicarConfig(nueva) {
+  if (nueva.mascota.visible && !hayGatito()) crearMascota()
+  if (!nueva.mascota.visible && hayGatito()) mascota.destroy()
+  if (!esPrueba) require('./nucleo/autoarranque').aplicar(app, nueva.inicioAutomatico)
+  enviarEstado()
+}
+
+// Ajustes (y bienvenida la primera vez) en la misma ventana del panel: no suma otro proceso.
+function abrirAjustes() {
+  if (!ventana) return
+  abrirCentro()
+  const mostrar = () => ventana.webContents.send('vista', 'ajustes')
+  if (ventana.webContents.isLoading()) ventana.webContents.once('did-finish-load', mostrar)
+  else mostrar()
 }
 
 // Tocar al gatito (o el atajo, o la bandeja) abre el centro de mando al lado del gato.
@@ -437,25 +452,23 @@ function crearVentana() {
 
 // --- bandeja e inicio con Windows ---------------------------------------
 
-const opcionesInicio = () => ({ path: process.execPath, args: [app.getAppPath()] })
 
 function menuBandeja() {
   return Menu.buildFromTemplate([
-    { label: `Abrir el centro de mando   (${ATAJO.replace('Control', 'Ctrl')})`, click: alternarCentroDesdeAfuera },
+    { label: `Abrir el centro de mando   (${ATAJO.replace('CommandOrControl', process.platform === 'darwin' ? 'Cmd' : 'Ctrl')})`, click: alternarCentroDesdeAfuera },
+    { label: 'Ajustes…', click: abrirAjustes },
+    { type: 'separator' },
     {
-      label: 'Iniciar con Windows',
+      label: 'Abrir al iniciar la computadora',
       type: 'checkbox',
-      checked: app.getLoginItemSettings(opcionesInicio()).openAtLogin,
-      click: item => {
-        config().set({ inicioAutomatico: item.checked })
-        app.setLoginItemSettings({ ...opcionesInicio(), openAtLogin: item.checked })
-      },
+      checked: config().get().inicioAutomatico,
+      click: item => config().set({ inicioAutomatico: item.checked }),
     },
     {
       label: 'Gatito en el escritorio',
       type: 'checkbox',
-      checked: Boolean(mascota),
-      click: item => alternarMascota(item.checked),
+      checked: hayGatito(),
+      click: item => config().set({ 'mascota.visible': item.checked }),
     },
     { label: 'Probar alerta de reunión', click: probarAlerta },
     { label: 'Abrir carpeta de datos', click: () => shell.openPath(CENTRO) },
@@ -468,8 +481,10 @@ function crearBandeja() {
   // Pixel art: una imagen por escala de pantalla, para que no se vea borroso.
   const imagen = nativeImage.createFromBuffer(gatoPng(1), { scaleFactor: 1 })
   imagen.addRepresentation({ scaleFactor: 2, buffer: gatoPng(2) })
+  // La barra de menú de macOS pinta los íconos "plantilla" según el tema claro u oscuro.
+  if (process.platform === 'darwin') imagen.setTemplateImage(true)
   bandeja = new Tray(imagen)
-  bandeja.setToolTip('Centro de mando de Claude')
+  bandeja.setToolTip('Centro de mando')
   bandeja.on('click', alternarCentroDesdeAfuera)
   bandeja.on('right-click', () => bandeja.popUpContextMenu(menuBandeja()))
 }
@@ -559,6 +574,7 @@ ipcMain.on('pedir-estado', enviarEstado)
 ipcMain.on('abrir-gatito', (evento,x) => {if(evento.sender!==mascota?.webContents)return;abrirCentro(mascota.getBounds().x+x)})
 ipcMain.on('gatito-descanso', (_evento, si) => vida.actuar('descanso', Boolean(si)))
 // Cambios de config desde las páginas: la config valida cada valor y rechaza claves desconocidas.
+ipcMain.on('abrir-ajustes', abrirAjustes)
 ipcMain.on('config', (_evento, cambios) => {
   if (!cambios || typeof cambios !== 'object' || Array.isArray(cambios)) return
   try { config().set(cambios) } catch (error) { console.error('Config:', error.message); return }
@@ -678,12 +694,17 @@ if (!app.requestSingleInstanceLock()) {
   })
   app.whenReady().then(() => {
     app.setAppUserModelId('centro-flotante')
+    // En macOS vive en la barra de menú, sin ícono en el Dock.
+    app.dock?.hide()
     if (process.env.CENTRO_METRICAS) require('./metricas').iniciar(app)
     require('./fuentes').escribirConfigPlugin(CENTRO, config().get())
     config().alCambiar(nueva => require('./fuentes').escribirConfigPlugin(CENTRO, nueva))
     crearVentana()
     crearBandeja()
     if (config().get().mascota.visible) crearMascota()
+    if (!esPrueba) require('./nucleo/autoarranque').aplicar(app, config().get().inicioAutomatico)
+    config().alCambiar(aplicarConfig)
+    if (config().get().primerUso) abrirAjustes()
     for (const evento of ['display-added', 'display-removed', 'display-metrics-changed']) screen.on(evento, () => {
       vecinosCache = null
       if(saltoGlobal){cancelarSalto();enviarEstado();return}
@@ -722,6 +743,7 @@ if (!app.requestSingleInstanceLock()) {
             if(process.env.CENTRO_ESCENA==='centro-datos'){
               await ventana.webContents.executeJavaScript("for(const s of document.querySelectorAll('[data-seccion]'))s.hidden=false;ultimo={ahora:Date.now(),sesiones:[{id:'demo',name:'Centro de mando',cwd:'C:/proyectos/centro',status:'working',lastActivityAt:Date.now(),branch:'main',usage:{percent:36},agents:[]}],tickets:{loadedAt:Date.now(),items:[{key:'CMD-42',summary:'Revisar la agenda del equipo',status:'En curso',category:'indeterminate',url:'https://example.com'}]},reuniones:[{id:'demo',title:'Planificación del equipo',start:new Date(Date.now()+120000).toISOString(),end:new Date(Date.now()+1800000).toISOString(),joinUrl:'https://example.com'}]};pintar()")
             }
+            if(process.env.CENTRO_ESCENA==='ajustes'){abrirAjustes();await new Promise(listo=>setTimeout(listo,700))}
             if(process.env.CENTRO_ESCENA==='radial'&&mascota){await mascota.webContents.executeJavaScript('abrirMenu()');await new Promise(listo=>setTimeout(listo,100));ventana.showInactive()}
             if(['foco','foco-hover'].includes(process.env.CENTRO_ESCENA)&&mascota){
               await mascota.webContents.executeJavaScript("viaje=null;gatito={...gatito,foco:{fase:'foco',desde:Date.now(),hasta:Date.now()+25*60000,minutos:25}};maquina.vaciar();maquina.despertar();maquina.reiniciar();maquina.pedir('dormir',8,'captura-foco');accion=null")

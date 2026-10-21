@@ -64,3 +64,18 @@ const carpeta = () => fs.mkdtempSync(path.join(os.tmpdir(), 'centro-config-'))
 }
 
 console.log('Config: valores por defecto, validación, migración desde ajustes.json, set con rutas y archivo roto: OK.')
+
+// Inicio automático: el contenido para macOS (LaunchAgent) y Linux (autostart) arma bien el comando.
+{
+  const { plistMac, escritorioLinux, archivoDeInicio, ETIQUETA } = require('../src/nucleo/autoarranque')
+  const argumentos = ['/Apps/Electron.app/Contents/MacOS/Electron', '/Users/ana/gatito & cía/ventana']
+  const plist = plistMac(argumentos)
+  assert.match(plist, new RegExp(`<string>${ETIQUETA}</string>`))
+  assert.match(plist, /<string>\/Apps\/Electron\.app\/Contents\/MacOS\/Electron<\/string>\n {4}<string>\/Users\/ana\/gatito &amp; cía\/ventana<\/string>/)
+  assert.match(plist, /<key>RunAtLoad<\/key><true\/>/)
+  assert.match(escritorioLinux(['/opt/electron', '/home/ana/mi "gato"']), /^Exec="\/opt\/electron" "\/home\/ana\/mi \\"gato\\""$/m)
+  assert.equal(archivoDeInicio('darwin', '/Users/ana'), path.join('/Users/ana', 'Library', 'LaunchAgents', `${ETIQUETA}.plist`))
+  assert.equal(archivoDeInicio('linux', '/home/ana'), path.join('/home/ana', '.config', 'autostart', 'centro-de-mando.desktop'))
+  assert.equal(archivoDeInicio('win32', 'C:/Users/ana'), null)
+  console.log('Inicio automático: LaunchAgent de macOS, autostart de Linux y rutas: OK.')
+}
