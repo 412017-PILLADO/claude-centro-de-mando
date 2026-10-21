@@ -356,8 +356,10 @@ let ultimo = null
 
 function pintar() {
   if (!ultimo) return
-  const { ahora, sesiones, tickets, reuniones, errorReuniones, ajustes = {} } = ultimo
-  pintarReuniones(reuniones, ahora, errorReuniones, ajustes.reunionesSoloHoy === true)
+  const { ahora, sesiones, tickets, reuniones, errorReuniones, config = {}, fuentes = { sesiones: true, reuniones: true, tickets: true } } = ultimo
+  for (const nombre of Object.keys(fuentes)) document.querySelector?.(`[data-seccion="${nombre}"]`)?.classList.toggle('sin-fuente', !fuentes[nombre])
+  $('sin-fuentes').hidden = Object.values(fuentes).some(Boolean)
+  pintarReuniones(reuniones, ahora, errorReuniones, config.fuentes?.reuniones?.soloHoy === true)
   pintarTickets(tickets, ahora)
   pintarSesiones(sesiones, ahora)
 }

@@ -9,7 +9,9 @@ const STORE_PROJECTS = 'projects'
 const STORE_JIRA_CLOUD = 'jiraCloudId'
 const MAX_PROJECTS = 12
 const MAX_TICKETS = 10
-const JQL = 'assignee = currentUser() AND statusCategory != Done ORDER BY updated DESC'
+const DEFAULT_JQL = 'assignee = currentUser() AND statusCategory != Done ORDER BY updated DESC'
+// Versión del formato de los archivos compartidos con la app de escritorio.
+const SHARED_VERSION = 1
 const EDITING_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit', 'Bash', 'PowerShell'])
 
 const NO_TICKETS: Tickets = { items: [], error: null, loadedAt: null, isLoading: false }
@@ -219,12 +221,22 @@ function parseIssues(result: McpToolResult): JiraIssue[] {
   return parsed.issues?.nodes ?? []
 }
 
-async function refreshTickets($: EngineInterface) {
+async function refreshTickets($: EngineInterface, force = false) {
+  const config = await pluginConfig($)
+  if (!config.tickets.activa) {
+    await update($, tickets, () => ({ ...NO_TICKETS, isOff: true }))
+    return
+  }
+  if (!force && (await isFresh($, 'tickets.json'))) {
+    const saved = await readShared<{ loadedAt: number; items: Ticket[] }>($, 'tickets.json')
+    if (saved) await update($, tickets, () => ({ items: saved.items, error: null, loadedAt: saved.loadedAt, isLoading: false }))
+    return
+  }
   await update($, tickets, old => ({ ...old, isLoading: true }))
   try {
     const result = await $.mcp.call(await jiraServer($), 'searchJiraIssuesUsingJql', {
       cloudId: await jiraCloudId($),
-      jql: JQL,
+      jql: config.tickets.jql,
       fields: ['summary', 'status', 'priority', 'updated'],
       maxResults: 50,
       responseContentFormat: 'markdown',
@@ -345,7 +357,16 @@ function parseEvents(result: McpToolResult): CalendarEvent[] {
   return (JSON.parse(text.slice(start)) as { events?: CalendarEvent[] }).events ?? []
 }
 
-async function refreshMeetings($: EngineInterface) {
+async function refreshMeetings($: EngineInterface, force = false) {
+  if (!(await pluginConfig($)).reuniones.activa) {
+    await update($, meetings, () => NO_MEETINGS)
+    return
+  }
+  if (!force && (await isFresh($, 'reuniones.json'))) {
+    const saved = await readShared<{ loadedAt: number; items: Meeting[] }>($, 'reuniones.json')
+    if (saved) await update($, meetings, () => ({ items: saved.items, error: null, loadedAt: saved.loadedAt }))
+    return
+  }
   try {
     // Sin rango: el conector trae desde ahora hasta 7 días.
     const result = await callCalendar($, { orderBy: 'startTime', pageSize: 30 })
@@ -374,7 +395,7 @@ async function refreshMeetings($: EngineInterface) {
       .sort((a, b) => Date.parse(a.start) - Date.parse(b.start))
       .slice(0, MAX_MEETINGS)
     await update($, meetings, () => ({ items, error: null, loadedAt: now }))
-    await writeShared($, 'reuniones.json', { loadedAt: now, items })
+    await writeShared($, 'reuniones.json', { version: SHARED_VERSION, loadedAt: now, items })
   } catch (error) {
     await failMeetings($, error instanceof Error ? error.message : String(error))
   }
@@ -429,6 +450,51 @@ async function sharedDir($: EngineInterface) {
   return `${home.replace(/\\/g, '/')}/.claude/centro`
 }
 
+async function readShared<T>($: EngineInterface, name: string): Promise<T | null> {
+  try {
+    return JSON.parse(await $.fs.read(`${await sharedDir($)}/${name}`)) as T
+  } catch {
+    return null
+  }
+}
+
+// La app de escritorio deja acá lo que la persona eligió en Ajustes; sin archivo, todo activo.
+type PluginConfig = { reuniones: { activa: boolean }; tickets: { activa: boolean; jql: string } }
+async function pluginConfig($: EngineInterface): Promise<PluginConfig> {
+  const saved = await readShared<Partial<PluginConfig>>($, 'config-plugin.json')
+  const jql = saved?.tickets?.jql
+
+  return {
+    reuniones: { activa: saved?.reuniones?.activa !== false },
+    tickets: { activa: saved?.tickets?.activa !== false, jql: typeof jql === 'string' && jql.trim() ? jql : DEFAULT_JQL },
+  }
+}
+
+// Qué conectores tiene esta persona en Claude: la app ofrece solo esas secciones.
+async function publishConnectors($: EngineInterface) {
+  const found = await Promise.all([
+    findServer($, 'searchJiraIssuesUsingJql'),
+    findServer($, 'list_events', /calendar/i),
+  ]).catch(() => null)
+  if (found === null) {
+    return
+  }
+  const [jira, calendario] = found
+  await writeShared($, 'conectores.json', {
+    version: SHARED_VERSION,
+    generado: await $.clock.now(),
+    jira: jira !== null,
+    calendario: calendario !== null,
+  })
+}
+
+// Otra sesión abierta ya lo trajo hace poco: no se vuelve a consultar el conector.
+async function isFresh($: EngineInterface, name: string) {
+  const saved = await readShared<{ loadedAt?: number }>($, name)
+
+  return typeof saved?.loadedAt === 'number' && (await $.clock.now()) - saved.loadedAt < TICKETS_EVERY_MS - 30_000
+}
+
 async function writeShared($: EngineInterface, name: string, value: unknown) {
   try {
     await $.fs.write(`${await sharedDir($)}/${name}`, JSON.stringify(value, null, 2))
@@ -463,7 +529,7 @@ async function publishProjects($: EngineInterface) {
 async function publishTickets($: EngineInterface) {
   const state = await read($, tickets)
   if (state.loadedAt !== null && state.error === null) {
-    await writeShared($, 'tickets.json', { loadedAt: state.loadedAt, items: state.items })
+    await writeShared($, 'tickets.json', { version: SHARED_VERSION, loadedAt: state.loadedAt, items: state.items })
   }
 }
 
@@ -483,12 +549,14 @@ export const register: Register = on => {
       await refreshSession($, cwd)
       await refreshUsage($)
       await refreshProjects($)
+      await publishConnectors($)
       await refreshTickets($)
       await refreshMeetings($)
     })()
     void $.ui.open({ id: PANE, title: TITLE })
     $.clock.every(HEARTBEAT_MS, () => void publishSession($))
     $.clock.every(TICKETS_EVERY_MS, () => {
+      void publishConnectors($)
       void refreshTickets($)
       void refreshMeetings($)
     })
@@ -515,7 +583,8 @@ export const register: Register = on => {
     await $.ui.open({ id: PANE, title: TITLE })
     await refreshSession($, await $.session.cwd())
     await refreshUsage($)
-    await Promise.all([refreshProjects($), refreshTickets($), refreshMeetings($)])
+    await publishConnectors($)
+    await Promise.all([refreshProjects($), refreshTickets($, true), refreshMeetings($, true)])
 
     return { text: 'Centro de mando actualizado.' }
   })
@@ -641,10 +710,10 @@ export const register: Register = on => {
           </Box>
         )}
 
-        <Box flexDirection="column">
+        {!ticketState.isOff && (<Box flexDirection="column">
           <Box flexDirection="row" justifyContent="space-between">
             <Text bold>Mis tickets</Text>
-            <Button key="refresh-tickets" label={ticketState.isLoading ? 'Cargando…' : 'Actualizar'} onPress={() => refreshTickets($)} />
+            <Button key="refresh-tickets" label={ticketState.isLoading ? 'Cargando…' : 'Actualizar'} onPress={() => refreshTickets($, true)} />
           </Box>
           {ticketState.error !== null && <Text color="error">Jira: {shorten(ticketState.error, 80)}</Text>}
           {ticketState.loadedAt !== null && ticketState.items.length === 0 && (
@@ -672,7 +741,7 @@ export const register: Register = on => {
             </Box>
           ))}
           {ticketState.loadedAt !== null && <Text dimColor>Actualizado {ago(now - ticketState.loadedAt)}</Text>}
-        </Box>
+        </Box>)}
 
         <Box flexDirection="column">
           <Text bold>Subagentes</Text>

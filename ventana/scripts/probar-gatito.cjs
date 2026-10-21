@@ -285,7 +285,7 @@ assert.ok(!observar(d,manana,libre).some(e=>['hambre','dormir','jugar','mimar'].
 // La integración usa toda la reunión (también sin enlace), no sólo su aviso inicial.
 const vm=require('node:vm'),mainFuente=fs.readFileSync(path.join(__dirname,'../src/main.js'),'utf8')
 let contextoObservado
-const mainCtx=vm.createContext({Date:class extends Date{static now(){return manana}},Math,path,CENTRO:carpeta,mascotaLista:true,ventana:{isVisible:()=>false},powerMonitor:{getSystemIdleTime:()=>0},leerSesiones:()=>[{status:'working'},{status:'waiting',lastActivityAt:manana}],leerReuniones:()=>[{start:new Date(manana-20*minuto).toISOString(),end:new Date(manana+40*minuto).toISOString()}],leerJson:()=>[],errorReuniones:()=>null,ajustes:()=>({}),vida:{observar(c){contextoObservado=c;return {datos:{},eventos:[]}}}})
+const mainCtx=vm.createContext({Date:class extends Date{static now(){return manana}},Math,path,CENTRO:carpeta,mascotaLista:true,ventana:{isVisible:()=>false},powerMonitor:{getSystemIdleTime:()=>0},leerSesiones:()=>[{status:'working'},{status:'waiting',lastActivityAt:manana}],leerReuniones:()=>[{start:new Date(manana-20*minuto).toISOString(),end:new Date(manana+40*minuto).toISOString()}],leerJson:()=>[],errorReuniones:()=>null,config:()=>({get:()=>({})}),fuentesVisibles:()=>({sesiones:true,reuniones:true,tickets:true}),vida:{observar(c){contextoObservado=c;return {datos:{},eventos:[]}}}})
 vm.runInContext(mainFuente.slice(mainFuente.indexOf('function armarEstado()'),mainFuente.indexOf('// --- reuniones')),mainCtx)
 vm.runInContext('armarEstado()',mainCtx)
 assert.equal(contextoObservado.reunion,true);assert.equal(contextoObservado.alerta,true);assert.equal(contextoObservado.trabajando,true)
@@ -409,7 +409,7 @@ for(const nombre of ['pared1','pared2','pared3','pared4']){
   screen:{getAllDisplays:()=>displays,getCursorScreenPoint:()=>({x:1900,y:1000}),getDisplayNearestPoint:p=>p.x>=1920?b:a},
   require:n=>n==='./monitores'?g:require('../src/caida'),
   monitorMascota:()=>guardado===1?a:b,zonaMascota:()=>{const d=guardado===1?a:b;return {x:d.workArea.x,y:d.workArea.y+d.workArea.height-340,width:d.workArea.width,height:340}},
-  guardarAjuste:(k,v)=>{guardado=v},enviarEstado:()=>actualizaciones++,armarEstado:()=>({contextoGatito:{},gatito:{}}),
+  config:()=>({set:c=>{guardado=c['mascota.monitor']}}),vecinosCache:null,enviarEstado:()=>actualizaciones++,armarEstado:()=>({contextoGatito:{},gatito:{}}),
   ipcMain:{on:(n,fn)=>handlers[n]=fn},setInterval:fn=>{timers.set(++id,fn);return id},clearInterval:n=>timers.delete(n)})
  vmSalto.runInContext(fuente.slice(fuente.indexOf('let arrastreGlobal ='),fuente.indexOf('function terminarArrastre()')),ctx)
  handlers['gatito-cruzar']({sender:{}},'derecha');assert.equal(timers.size,0,'valida sender')

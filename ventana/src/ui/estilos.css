@@ -137,6 +137,10 @@ body.plegado .panel {
 }
 
 #vista-trabajo .seccion[hidden] { display: none !important; }
+/* Fuente apagada o sin conector: la sección no existe para esta persona. */
+#vista-trabajo .seccion.sin-fuente { display: none !important; }
+.sin-fuentes h2 { margin: 0 0 4px; }
+.sin-fuentes .subtitulo { margin: 0; }
 
 /* --- bloque de vidrio neutro ------------------------------------------- */
 

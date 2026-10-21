@@ -9,8 +9,9 @@ const { gatoPng } = require('./icono')
 const CENTRO = process.env.CENTRO_DATOS || path.join(os.homedir(), '.claude', 'centro')
 const SESIONES = path.join(CENTRO, 'sesiones')
 const vida = require('./gatito').crearVida(CENTRO)
-// Experimento de consumo: sin aceleración por hardware (todo se dibuja en la CPU).
-if (process.env.CENTRO_SIN_GPU) app.disableHardwareAcceleration()
+// Config de la app (config.json en la carpeta de la app); se crea al primer uso, cuando ya hay ruta.
+let configCreada = null
+const config = () => (configCreada ??= require('./nucleo/config').crearConfig(app.getPath('userData')))
 // Las capturas y las mediciones usan su propio perfil para no cambiar los ajustes de la persona.
 if (process.env.CENTRO_PERFIL) {
   fs.mkdirSync(process.env.CENTRO_PERFIL, { recursive: true })
@@ -20,6 +21,7 @@ if (process.env.CENTRO_PERFIL) {
   fs.mkdirSync(perfil, { recursive: true })
   app.setPath('userData', perfil)
 }
+if (!config().get().aceleracionGrafica) app.disableHardwareAcceleration()
 const ATAJO = 'Control+Alt+Space'
 const SIN_SENAL_MS = 90_000 // el mod late cada 30 s
 const OLVIDAR_MS = 12 * 60 * 60 * 1000
@@ -110,15 +112,18 @@ function ocultarSesion(id) {
   enviarEstado()
 }
 
+const fuentesVisibles = () => require('./fuentes').visibles(config().get(), CENTRO, leerJson)
+
 function armarEstado() {
   const ahora = Date.now()
-  const sesiones=leerSesiones(ahora), reuniones=leerReuniones(ahora)
+  const fuentes = fuentesVisibles()
+  const sesiones=fuentes.sesiones?leerSesiones(ahora):[], reuniones=leerReuniones(ahora, fuentes)
   const reunion=reuniones.some(r=>Date.parse(r.start)-5*60000<=ahora && ahora<(Date.parse(r.end)||Date.parse(r.start)+3600000))
   const alerta=sesiones.some(s=>!s.sinSenal&&s.status==='waiting'&&ahora-(s.lastActivityAt||s.startedAt||0)<10*60000)
   const contexto={reunion,alerta,trabajando:sesiones.some(s=>!s.sinSenal&&s.status==='working'),inactivoSeg:powerMonitor.getSystemIdleTime(),panel:ventana?.isVisible()||false,azar:Math.random()}
   if(typeof screen!=='undefined')contexto.bordes=bordesMascota()
   const observado=mascotaLista?vida.observar(contexto):{datos:vida.leer(),eventos:[]}
-  return {ahora,gatito:observado.datos,eventosGatito:observado.eventos,contextoGatito:contexto,sesiones,reuniones,errorReuniones:errorReuniones(),ajustes:{reunionesSoloHoy:ajustes().reunionesSoloHoy===true},tickets:leerJson(path.join(CENTRO,'tickets.json'))}
+  return {ahora,gatito:observado.datos,eventosGatito:observado.eventos,contextoGatito:contexto,sesiones,reuniones,errorReuniones:errorReuniones(),config:config().get(),fuentes,tickets:fuentes.tickets?leerJson(path.join(CENTRO,'tickets.json')):null}
 }
 
 // --- reuniones -----------------------------------------------------------
@@ -137,8 +142,8 @@ function errorReuniones() {
   return error?.error && error.at > cargadas ? String(error.error) : null
 }
 
-function leerReuniones(ahora) {
-  const guardadas = leerJson(path.join(CENTRO, 'reuniones.json'))?.items ?? []
+function leerReuniones(ahora, fuentes = fuentesVisibles()) {
+  const guardadas = fuentes.reuniones ? leerJson(path.join(CENTRO, 'reuniones.json'))?.items ?? [] : []
   const todas = reunionDePrueba ? [reunionDePrueba, ...guardadas] : guardadas
   return todas
     .filter(r => Date.parse(r.end) > ahora)
@@ -236,15 +241,12 @@ const ALTO_MASCOTA = 340 // gatito + lugar para globos apilados encima
 let mascota = null
 let mascotaLista = false
 
-const archivoAjustes = () => path.join(app.getPath('userData'), 'ajustes.json')
-const ajustes = () => leerJson(archivoAjustes()) ?? {}
-const guardarAjuste = (clave, valor) => fs.writeFileSync(archivoAjustes(), JSON.stringify({ ...ajustes(), [clave]: valor }))
 
 // Los monitores vecinos solo cambian cuando cambia la configuración de pantallas.
 let vecinosCache = null
 const vecinosDeMascota = () => (vecinosCache ??= require('./monitores').vecinos(screen.getAllDisplays(), monitorMascota()))
 function monitorMascota() {
-  return require('./monitores').elegirMonitor(screen.getAllDisplays(), ajustes().monitor, screen.getPrimaryDisplay())
+  return require('./monitores').elegirMonitor(screen.getAllDisplays(), config().get().mascota.monitor, screen.getPrimaryDisplay())
 }
 
 function bordesMascota() {
@@ -289,7 +291,7 @@ function crearMascota() {
 }
 
 function alternarMascota(visible) {
-  guardarAjuste('mascota', visible)
+  config().set({ 'mascota.visible': visible })
   if (visible) crearMascota()
   else mascota?.destroy()
 }
@@ -444,7 +446,10 @@ function menuBandeja() {
       label: 'Iniciar con Windows',
       type: 'checkbox',
       checked: app.getLoginItemSettings(opcionesInicio()).openAtLogin,
-      click: item => app.setLoginItemSettings({ ...opcionesInicio(), openAtLogin: item.checked }),
+      click: item => {
+        config().set({ inicioAutomatico: item.checked })
+        app.setLoginItemSettings({ ...opcionesInicio(), openAtLogin: item.checked })
+      },
     },
     {
       label: 'Gatito en el escritorio',
@@ -497,7 +502,7 @@ ipcMain.on('gatito-cruzar',(evento,lado)=>{
     mascota.setBounds({x:izquierda,y:Math.round(p.y-ALTO_MASCOTA),width:area.width,height:ALTO_MASCOTA})
     mascota.webContents.send('gatito-arrastre',{x:p.x-izquierda,saltando:true,fase:p.fase,lado})
     if(t===1){
-      clearInterval(saltoGlobal.reloj);saltoGlobal=null;guardarAjuste('monitor',destino.id);vecinosCache=null
+      clearInterval(saltoGlobal.reloj);saltoGlobal=null;config().set({'mascota.monitor':destino.id});vecinosCache=null
       mascota.setBounds(zonaMascota())
       mascota.webContents.send('gatito-arrastre',{aterrizo:true,x:plan.aterrizaje.x-destino.workArea.x})
       enviarEstado()
@@ -508,7 +513,7 @@ function empezarCaida(cursor = screen.getCursorScreenPoint()) {
   if (!mascota) return
   if (caidaGlobal) clearInterval(caidaGlobal)
   const display = screen.getDisplayNearestPoint(cursor), area=display.workArea
-  guardarAjuste('monitor', display.id)
+  config().set({ 'mascota.monitor': display.id })
   vecinosCache = null
   const piso=area.y+area.height-ALTO_MASCOTA
   const origen=Math.max(area.y-ALTO_MASCOTA+84,Math.min(piso,mascota.getBounds().y))
@@ -553,10 +558,10 @@ ipcMain.on('gatito-posicion', (evento, x) => { if(mascota && evento.sender===mas
 ipcMain.on('pedir-estado', enviarEstado)
 ipcMain.on('abrir-gatito', (evento,x) => {if(evento.sender!==mascota?.webContents)return;abrirCentro(mascota.getBounds().x+x)})
 ipcMain.on('gatito-descanso', (_evento, si) => vida.actuar('descanso', Boolean(si)))
-// Ajustes del centro (no del gato): solo los conocidos y con su tipo.
-ipcMain.on('ajuste', (_evento, { clave, valor } = {}) => {
-  if (clave !== 'reunionesSoloHoy' || typeof valor !== 'boolean') return
-  guardarAjuste(clave, valor)
+// Cambios de config desde las páginas: la config valida cada valor y rechaza claves desconocidas.
+ipcMain.on('config', (_evento, cambios) => {
+  if (!cambios || typeof cambios !== 'object' || Array.isArray(cambios)) return
+  try { config().set(cambios) } catch (error) { console.error('Config:', error.message); return }
   enviarEstado()
 })
 ipcMain.on('gatito-accion', (_evento, { accion, valor } = {}) => {
@@ -674,9 +679,11 @@ if (!app.requestSingleInstanceLock()) {
   app.whenReady().then(() => {
     app.setAppUserModelId('centro-flotante')
     if (process.env.CENTRO_METRICAS) require('./metricas').iniciar(app)
+    require('./fuentes').escribirConfigPlugin(CENTRO, config().get())
+    config().alCambiar(nueva => require('./fuentes').escribirConfigPlugin(CENTRO, nueva))
     crearVentana()
     crearBandeja()
-    if (ajustes().mascota !== false) crearMascota()
+    if (config().get().mascota.visible) crearMascota()
     for (const evento of ['display-added', 'display-removed', 'display-metrics-changed']) screen.on(evento, () => {
       vecinosCache = null
       if(saltoGlobal){cancelarSalto();enviarEstado();return}

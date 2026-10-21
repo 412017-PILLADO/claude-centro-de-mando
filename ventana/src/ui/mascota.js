@@ -47,7 +47,7 @@ for (const nombre of DIBUJOS) {
 
 let cuadroActual = null
 let gatito = { color: 'negro', saciedad: 80, energia: 80, carino: 80 }
-let ajustesCentro = {}
+let configCentro = {}
 // Cada dibujo se carga (y se recolorea) recién cuando se muestra; el recoloreado queda cacheado.
 function cargarDibujo(nombre) {
   const img = imagenes[nombre]
@@ -185,8 +185,8 @@ function cuandoReunion(reunion, ahora) {
   return minutos > 0 ? `en ${minutos} min` : 'ya empezó'
 }
 
-api.alRecibirEstado(({ ahora, sesiones, reuniones, gatito: nuevo, eventosGatito=[], contextoGatito={}, ajustes: nuevosAjustes = {} }) => {
-  ajustesCentro = nuevosAjustes
+api.alRecibirEstado(({ ahora, sesiones, reuniones, gatito: nuevo, eventosGatito=[], contextoGatito={}, config = configCentro }) => {
+  configCentro = config
   if (nuevo) {
     if (nuevo.color !== gatito.color) aplicarColor(nuevo.color)
     const estabaEnFoco=enFoco()
@@ -552,13 +552,13 @@ $('cuenco-pedido').onclick=darDeComer
 $('cuenco-pedido').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();darDeComer()}}
 function abrirAjustes(){
  cerrarMenu();const tarjeta=$('ajustes-gato');tarjeta.hidden=false
- $('ajustes-nombre').value=gatito.nombre||'Michi';$('ajustes-pausas').checked=gatito.autonomia?.pausas!==false;$('ajustes-solo-hoy').checked=ajustesCentro.reunionesSoloHoy===true
+ $('ajustes-nombre').value=gatito.nombre||'Michi';$('ajustes-pausas').checked=gatito.autonomia?.pausas!==false;$('ajustes-solo-hoy').checked=configCentro.fuentes?.reuniones?.soloHoy===true
  for(const b of $('ajustes-colores').children)b.setAttribute('aria-pressed',b.dataset.color===gatito.color)
  ubicarGlobo(tarjeta);api.menuRapido(true);hacerTocable(true);$('ajustes-nombre').focus?.()
 }
 $('ajustes-nombre').onchange=()=>api.cuidarGatito('nombre',$('ajustes-nombre').value)
 $('ajustes-pausas').onchange=()=>api.cuidarGatito('pausas',$('ajustes-pausas').checked)
-$('ajustes-solo-hoy').onchange=()=>api.guardarAjuste('reunionesSoloHoy',$('ajustes-solo-hoy').checked)
+$('ajustes-solo-hoy').onchange=()=>api.cambiarConfig({'fuentes.reuniones.soloHoy':$('ajustes-solo-hoy').checked})
 $('ajustes-cerrar').onclick=()=>{cerrarMenu();abrirMenu()}
 for(const color of ['negro','gris','naranja','crema','siames','atigrado']){
  const b=document.createElement('button');b.className='pelaje-'+color;b.dataset.color=color;b.setAttribute('aria-label',color);b.onclick=()=>api.cuidarGatito('color',color);$('ajustes-colores').append(b)

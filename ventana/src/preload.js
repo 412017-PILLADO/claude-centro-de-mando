@@ -10,7 +10,7 @@ contextBridge.exposeInMainWorld('centro', {
   alRecibirArrastre: callback => ipcRenderer.on('gatito-arrastre', (_e, datos) => callback(datos)),
   registrarGatito: entradas => ipcRenderer.send('gatito-registro', entradas),
   cuidarGatito: (accion, valor) => ipcRenderer.send('gatito-accion', { accion, valor }),
-  guardarAjuste: (clave, valor) => ipcRenderer.send('ajuste', { clave, valor }),
+  cambiarConfig: cambios => ipcRenderer.send('config', cambios),
   descansoGatito: si => ipcRenderer.send('gatito-descanso', Boolean(si)),
   alRecibirCuidado: callback => ipcRenderer.on('gatito-accion', (_evento, accion) => callback(accion)),
   alRecibirEstado: callback => ipcRenderer.on('estado', (_event, estado) => callback(estado)),

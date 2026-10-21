@@ -26,11 +26,15 @@ module.exports=raiz=>{
   assert.deepEqual(nodos.get('filtros').children.map(b=>b.textContent),['Todos 3','Tarea por hacer 1','Pruebas de usuario 1','En curso 1'])
   nodos.get('filtros').children[2].events.click();assert.doesNotMatch(nodos.get('tickets').textContent,/B-2/);assert.match(nodos.get('tickets').textContent,/B-3/)
   nodos.get('filtros').children[0].events.click();recibir(estado)}
+ // Sin fuentes activas: se avisa que es solo el gatito; con alguna, el aviso se oculta.
+ recibir({...estado,fuentes:{sesiones:false,reuniones:false,tickets:false}});assert.equal(nodos.get('sin-fuentes').hidden,false)
+ recibir({...estado,fuentes:{sesiones:true,reuniones:false,tickets:false}});assert.equal(nodos.get('sin-fuentes').hidden,true)
+ recibir(estado)
  // Con "Solo reuniones de hoy" la de mañana no se lista.
  {const manana=new Date(ahora);manana.setDate(manana.getDate()+1);manana.setHours(10,0,0,0);const otra={id:'2',title:'Retro',start:manana.toISOString(),end:new Date(manana.getTime()+1800000).toISOString()}
   recibir({...estado,reuniones:[r,otra]});assert.match(nodos.get('reuniones').textContent,/Retro/)
-  recibir({...estado,reuniones:[r,otra],ajustes:{reunionesSoloHoy:true}});assert.doesNotMatch(nodos.get('reuniones').textContent,/Retro/);assert.equal(nodos.get('cuenta-reuniones').textContent,'1')
-  recibir({...estado,reuniones:[otra],ajustes:{reunionesSoloHoy:true}});assert.match(nodos.get('sub-reuniones').textContent,/Sin más reuniones hoy/)
+  recibir({...estado,reuniones:[r,otra],config:{fuentes:{reuniones:{soloHoy:true}}}});assert.doesNotMatch(nodos.get('reuniones').textContent,/Retro/);assert.equal(nodos.get('cuenta-reuniones').textContent,'1')
+  recibir({...estado,reuniones:[otra],config:{fuentes:{reuniones:{soloHoy:true}}}});assert.match(nodos.get('sub-reuniones').textContent,/Sin más reuniones hoy/)
   recibir(estado)}
  nodos.get('btn-probar').events.click({stopPropagation(){}});assert.equal(enviados.at(-1)[0],'probarAlerta');
  for(const id of ['agarre-alto','agarre-ancho']){assert.equal(typeof nodos.get(id).events.pointerdown,'function');nodos.get(id).events.dblclick();assert.equal(enviados.at(-1)[0],'tamanoAutomatico')}

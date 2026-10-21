@@ -27,6 +27,8 @@ test('el panel muestra un subagente en curso en cada superficie', async ($, on) 
 test('/centro trae los tickets de Jira y el uso de contexto', async ($, on) => {
   mock.clock(on, { now: 1_000_000 })
   mock.store(on)
+  on('env.get', () => ({ value: 'C:/Users/demo' }))
+  on('fs.write', () => ({ value: undefined }))
   on('session.cwd', () => ({ value: 'C:/proyectos/demo' }))
   on('tool.list', () => ({ value: [{ name: 'mcp__mi_jira__searchJiraIssuesUsingJql', description: 'Search issues with JQL', mcp: true }] }))
   on('process.run', () => ({ value: { exitCode: 1, stdout: '', stderr: '' } }))
@@ -125,7 +127,7 @@ test('trae las reuniones del calendario y comparte el link para unirse', async (
       events: [
         {
           id: 'daily-1',
-          summary: 'Daily Artico',
+          summary: 'Daily del equipo',
           status: 'confirmed',
           start: { dateTime: '2026-10-19T12:00:00-03:00' },
           end: { dateTime: '2026-10-19T12:30:00-03:00' },
@@ -151,10 +153,48 @@ test('trae las reuniones del calendario y comparte el link para unirse', async (
     items: { title: string; joinUrl: string }[]
   }
   expect(shared.items.length).toBe(1)
-  expect(shared.items[0]?.title).toBe('Daily Artico')
+  expect(shared.items[0]?.title).toBe('Daily del equipo')
   expect(shared.items[0]?.joinUrl).toBe('https://meet.google.com/abc-defg-hij')
 
   const ui = await $.ui.mount({ plugin: 'centro-de-mando', surface: 'terminal', ...PANE })
-  expect(await ui.find({ type: 'Text', text: /Daily Artico/ })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: /Daily del equipo/ })).toBeDefined()
+  await ui.unmount()
+})
+
+test('con Tickets apagado en la app no consulta Jira y publica los conectores', async ($, on) => {
+  const written: Record<string, string> = {}
+  const calls: string[] = []
+  mock.clock(on, { now: 1_000_000 })
+  mock.store(on)
+  on('env.get', () => ({ value: 'C:/Users/demo' }))
+  on('fs.read', (_$, e) => {
+    if (e.path.endsWith('config-plugin.json')) {
+      return { value: JSON.stringify({ tickets: { activa: false }, reuniones: { activa: true } }) }
+    }
+    throw new Error('ENOENT')
+  })
+  on('fs.write', (_$, e) => {
+    written[e.path.replace(/\\/g, '/')] = e.text
+    return { value: undefined }
+  })
+  on('session.cwd', () => ({ value: 'C:/proyectos/demo' }))
+  on('tool.list', () => ({ value: [{ name: 'mcp__mi_jira__searchJiraIssuesUsingJql', description: 'Search issues with JQL', mcp: true }] }))
+  on('process.run', () => ({ value: { exitCode: 1, stdout: '', stderr: '' } }))
+  on('ui.open', () => ({ value: { isPlaced: true } }))
+  on('ui.status', () => ({ value: undefined }))
+  on('session.usage', () => ({ value: { startedAt: 0, context: { window: 200_000 }, rateLimits: [] } }))
+  on('mcp.call', (_$, e) => {
+    calls.push(e.tool)
+    return { value: text('error') }
+  })
+
+  await $.command.run({ command: 'centro' })
+
+  expect(calls.includes('searchJiraIssuesUsingJql')).toBe(false)
+  const connectors = JSON.parse(written['C:/Users/demo/.claude/centro/conectores.json'] ?? '{}') as { jira: boolean; calendario: boolean }
+  expect(connectors.jira).toBe(true)
+  expect(connectors.calendario).toBe(false)
+  const ui = await $.ui.mount({ plugin: 'centro-de-mando', surface: 'terminal', ...PANE })
+  expect(await ui.find({ type: 'Text', text: /Mis tickets/ })).toBeUndefined()
   await ui.unmount()
 })
