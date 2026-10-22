@@ -8,12 +8,12 @@
     <link rel="stylesheet" href="tokens.css" />
   </head>
   <body>
+    <div id="cuenco-pedido" role="button" tabindex="0" aria-label="Dar de comer" class="cuenco-pedido" hidden><img src="sprites/cuenco-vacio.png" alt="Cuenco vacío" /></div>
     <div id="mascota" class="mascota">
       <div id="menu-rapido" class="menu-rapido" role="menu" aria-label="Cuidados rápidos" hidden></div><span id="foco-franja" class="foco-franja" role="timer" hidden></span><span id="corazon-caricia" class="corazon-caricia" aria-hidden="true"></span>
       <aside id="ajustes-gato" class="tarjeta-gato ajustes-gato" aria-label="Ajustes del gato" hidden><label>Nombre <input id="ajustes-nombre" maxlength="30" /></label><div id="ajustes-colores" class="colores"></div><label><input id="ajustes-pausas" type="checkbox" role="switch" /> Pausas activas</label><label><input id="ajustes-solo-hoy" type="checkbox" role="switch" /> Solo reuniones de hoy</label><button id="ajustes-mas">Más ajustes…</button><button id="ajustes-cerrar">Volver</button></aside>
       <div id="alertas" class="alertas"></div>
       <div id="zzz" class="zzz" hidden><span>z</span><span>z</span><span>Z</span></div>
-      <img id="cuenco-pedido" role="button" tabindex="0" aria-label="Dar de comer" class="cuenco-pedido" src="sprites/cuenco-vacio.png" alt="Cuenco vacío" hidden />
       <div id="gato" class="gato" title="Tocame para abrir el centro de mando"></div>
     </div>
     <script src="colores.js"></script>

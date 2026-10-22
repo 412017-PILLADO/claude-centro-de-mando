@@ -120,12 +120,20 @@ function armarEstado() {
   const ahora = Date.now()
   const fuentes = fuentesVisibles()
   const sesiones=fuentes.sesiones?leerSesiones(ahora):[], reuniones=leerReuniones(ahora, fuentes)
-  const reunion=reuniones.some(r=>Date.parse(r.start)-5*60000<=ahora && ahora<(Date.parse(r.end)||Date.parse(r.start)+3600000))
-  const alerta=sesiones.some(s=>!s.sinSenal&&s.status==='waiting'&&ahora-(s.lastActivityAt||s.startedAt||0)<10*60000)
-  const contexto={reunion,alerta,trabajando:sesiones.some(s=>!s.sinSenal&&s.status==='working'),inactivoSeg:powerMonitor.getSystemIdleTime(),panel:ventana?.isVisible()||false,azar:Math.random()}
-  if(typeof screen!=='undefined')contexto.bordes=bordesMascota()
+  const contexto=contextoDelGatito(ahora,sesiones,reuniones)
   const observado=mascotaLista?vida.observar(contexto):{datos:vida.leer(),eventos:[]}
   return {ahora,gatito:observado.datos,eventosGatito:observado.eventos,contextoGatito:contexto,sesiones,reuniones,errorReuniones:errorReuniones(),config:config().get(),fuentes,conectores:leerJson(path.join(CENTRO,'conectores.json')),tickets:fuentes.tickets?leerJson(path.join(CENTRO,'tickets.json')):null}
+}
+
+// Una sesión que espera frena las necesidades del gato sólo mientras el aviso es nuevo:
+// cada turno de Claude termina en "waiting", así que con diez minutos el gato nunca vivía.
+const ALERTA_FRESCA_MS = 90_000
+function contextoDelGatito(ahora, sesiones, reuniones) {
+  const reunion=reuniones.some(r=>Date.parse(r.start)-5*60000<=ahora && ahora<(Date.parse(r.end)||Date.parse(r.start)+3600000))
+  const alerta=sesiones.some(s=>!s.sinSenal&&s.status==='waiting'&&ahora-(s.lastActivityAt||s.startedAt||0)<ALERTA_FRESCA_MS)
+  const contexto={reunion,alerta,trabajando:sesiones.some(s=>!s.sinSenal&&s.status==='working'),inactivoSeg:powerMonitor.getSystemIdleTime(),panel:ventana?.isVisible()||false,azar:Math.random()}
+  if(typeof screen!=='undefined')contexto.bordes=bordesMascota()
+  return contexto
 }
 
 // --- reuniones -----------------------------------------------------------
@@ -502,9 +510,11 @@ function cancelarSalto(caer=true) {
 }
 ipcMain.on('gatito-cruzar',(evento,lado)=>{
   if(!mascota||evento.sender!==mascota.webContents||!['izquierda','derecha'].includes(lado)||saltoGlobal||arrastreGlobal||caidaGlobal)return
-  const estado=armarEstado(),c=estado.contextoGatito
+  // Sin observar la vida: observar consume los eventos de la rutina y acá se perderían.
+  const ahora=Date.now(),fuentes=fuentesVisibles()
+  const c=contextoDelGatito(ahora,fuentes.sesiones?leerSesiones(ahora):[],leerReuniones(ahora,fuentes))
   const origen=monitorMascota(),g=require('./monitores'),destino=g.vecinos(screen.getAllDisplays(),origen)[lado]
-  if(!destino||c.reunion||c.alerta||c.trabajando||c.panel||estado.gatito.foco?.fase==='foco'){
+  if(!destino||c.reunion||c.alerta||c.trabajando||c.panel||vida.leer().foco?.fase==='foco'){
     mascota.webContents.send('gatito-arrastre',{x:(centroGatoGlobal??origen.workArea.x+75)-origen.workArea.x,cancelado:true});return
   }
   const plan=g.planSalto(origen,destino,lado),desde=Date.now()
@@ -772,6 +782,11 @@ if (!app.requestSingleInstanceLock()) {
               mascota.setBounds({x:area.x,y:area.y-ALTO_MASCOTA+100,width:area.width,height:ALTO_MASCOTA})
               empezarCaida({x:area.x+Math.round(area.width/2),y:area.y+100})
               await new Promise(listo => setTimeout(listo, 350))
+            }
+            // Guion libre para revisar una animación puntual: JS en la mascota y espera en ms.
+            if (process.env.CENTRO_GUION && mascota) {
+              await mascota.webContents.executeJavaScript(process.env.CENTRO_GUION)
+              await new Promise(listo => setTimeout(listo, Number(process.env.CENTRO_ESPERA) || 700))
             }
             fs.writeFileSync(process.env.CENTRO_CAPTURA, (await ventana.webContents.capturePage()).toPNG())
             if (process.env.CENTRO_CAPTURA_MASCOTA && mascota) {

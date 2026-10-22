@@ -30,7 +30,10 @@ for (const nombre of DIBUJOS) {
   img.draggable = false
   img.height = ALTO_GATO
   // El lienzo incluye aire sobre algunas poses: acercar el globo a los píxeles visibles.
+  img.onerror = () => { img.listo = true; if (cuadroActual === nombre) pintarVisible() }
   img.onload = () => {
+    img.listo = true
+    if (cuadroActual === nombre) pintarVisible()
     const lienzo = document.createElement('canvas')
     lienzo.width = img.naturalWidth; lienzo.height = img.naturalHeight
     const contexto = lienzo.getContext('2d')
@@ -59,12 +62,25 @@ function aplicarColor(color) {
   colorActual = color
   if (cuadroActual) cargarDibujo(cuadroActual)
 }
+// Dibujos cortados corridos respecto de sentado-quieto (en píxeles del lienzo): se compensan al mostrarlos.
+const CORRIMIENTO = { tablet: 20 }
+for (const [nombre, px] of Object.entries(CORRIMIENTO)) imagenes[nombre]?.style.setProperty('--corrimiento', (px * ALTO_GATO / 237).toFixed(1) + 'px')
+// Un dibujo que se muestra por primera vez tarda en recolorearse: mientras tanto queda el anterior,
+// así el gato no desaparece un instante en cada cuadro nuevo.
+let visible = null
+function pintarVisible() {
+  const img = imagenes[cuadroActual]
+  if (visible && img.listo === false) return
+  if (visible && visible !== img) visible.style.display = 'none'
+  img.style.display = 'block'
+  visible = img
+}
 function mostrarCuadro(nombre) {
   if (nombre === cuadroActual) return
+  if (imagenes[nombre].listo === undefined) imagenes[nombre].listo = false
   cargarDibujo(nombre)
-  if (cuadroActual) imagenes[cuadroActual].style.display = 'none'
-  imagenes[nombre].style.display = 'block'
   cuadroActual = nombre
+  pintarVisible()
 }
 
 // --- globos de alerta ----------------------------------------------------------
@@ -81,7 +97,8 @@ function mostrarAlerta(id, { icono = '', negrita = '', texto = '', boton = null,
   if (descartadas.has(id)) return
   const existente = alertas.get(id)
   if (!enFoco() && !existente && id.startsWith('reu:')) maquina.pedir('reunion', 5, id)
-  if (!enFoco() && !existente && id.startsWith('ses:')) maquina.pedir('sesion', 4, id)
+  // Una sesión no lo despierta: el globo alcanza. Si terminó, festeja; si sólo espera, para las orejas.
+  if (!enFoco() && !existente && id.startsWith('ses:') && !maquina.durmiendo()) maquina.pedir(tono === 'listo' ? 'sesion' : 'atento', 4, id)
   const alerta = { desde: existente?.desde ?? performance.now(), icono, negrita, texto, boton, tono, despues, hasta: existente?.hasta ?? performance.now() + ms, nodo: existente && existente.nodo }
   if(existente && existente.icono===icono && existente.tono===tono && !!existente.negrita===!!negrita && existente.boton?.texto===boton?.texto && !!existente.despues===!!despues){
     Object.assign(existente,alerta)
@@ -214,7 +231,7 @@ api.alRecibirEstado(({ ahora, sesiones, reuniones, gatito: nuevo, eventosGatito=
     const grupo='ses:grupo:'+JSON.stringify(esperando.map(s=>[s.id,ultimaActividad(s)]).sort((a,b)=>String(a[0]).localeCompare(String(b[0]))));vigentes.add(grupo)
     const yaAgrupadas=alertas.has(grupo)
     mostrarAlerta(grupo,{icono:'💬',texto:esperando.length+' sesiones te esperan',ms: 8000})
-    if(terminadas.size&&!enFoco()&&yaAgrupadas)maquina.pedir('sesion',4,'fin-sesiones:'+ahora)
+    if(terminadas.size&&!enFoco()&&yaAgrupadas&&!maquina.durmiendo())maquina.pedir('sesion',4,'fin-sesiones:'+ahora)
   }
   for (const s of esperando.length>1?[]:esperando) {
     const id = `ses:${s.id}:${ultimaActividad(s)}`
@@ -258,7 +275,8 @@ api.alRecibirEstado(({ ahora, sesiones, reuniones, gatito: nuevo, eventosGatito=
   else if (esperando.length) modo = 'esperando'
   else if (!vivas.some(s => ahora - ultimaActividad(s) < DORMILON_MS)) modo = 'dormilon'
   else modo = 'tranqui'
-  impedido=contextoGatito.reunion||contextoGatito.alerta||proximas.length>0||esperando.length>0
+  // Una sesión esperando sólo frena las necesidades mientras el aviso es nuevo (main decide cuánto): si no, con Claude abierto nunca viviría.
+  impedido=contextoGatito.reunion||contextoGatito.alerta||proximas.length>0
   if(impedido){for(const id of gestosPendientes.keys())cerrarAlerta(id);cerrarAlerta('hambre');for(const id of alertas.keys())if(/^(pausa:|rutina:|saludo:|despedida:|festejo:)/.test(id))cerrarAlerta(id);if(viaje?.estado==='hambre')viaje=null;maquina.cancelar('hambre')}
   for(const evento of eventosGatito)if(evento.tipo==='fin-foco'||evento.tipo==='fin-descanso'){mostrarAlerta(evento.id,{texto:evento.texto,ms: 21000});if(evento.tipo==='fin-descanso')ronronear()}else if(!impedido&&!enFoco())conductaPropia(evento)
 })
@@ -292,7 +310,7 @@ function enviarRegistroGatito(){
 setInterval(enviarRegistroGatito,30000)
 function registrarSecuencia(s,ahora){
  const categoria=String(s.id||'').split(':')[0]
- const id=s.id?(['hambre','giro-panel','viaje','propia','reu','ses','pausa','rutina','saludo','despedida','festejo','foco','fin-foco','fin-sesiones'].includes(categoria)?categoria:'pedido'):null
+ const id=s.id?(['hambre','giro-panel','giro-viaje','giro-cursor','duda','viaje','propia','reu','ses','pausa','rutina','saludo','despedida','festejo','foco','fin-foco','fin-sesiones'].includes(categoria)?categoria:'pedido'):null
  registroGatito.push({t:Date.now(),estado:s.estado,variante:s.variante||null,id,prioridad:s.prioridad||0,poseInicial:s.poseInicial,poseFinal:s.poseFinal,motivo:s.motivo||'pedido'})
  if(registroGatito.length>200)registroGatito.shift()
  pendientesRegistro=Math.min(200,pendientesRegistro+1)
@@ -303,7 +321,7 @@ let arrastre = null
 let cayendo = false, ultimoDescanso = -Infinity, ultimoCentro = null
 let maullidoHasta=0
 let viaje=null, ultimoPaso=null, impedido=false, cursorX=null, corazonHasta=0
-let bordes={izquierda:false,derecha:false},salto=null,preparando=null
+let bordes={izquierda:false,derecha:false},salto=null,preparando=null,cuencoX=null
 const globosEnEspera=new Map()
 function puedeCruzar(){return !impedido&&!trabajando&&!enFoco()&&!maquina.durmiendo()&&!centroAbierto&&!arrastre&&!cayendo&&!salto&&!alertas.size}
 // El gato no persigue el mouse: solo lo mira cuando pasa cerca, sin moverse de lugar.
@@ -321,8 +339,15 @@ function observarCursor(p){
 const limite = valor => Math.max(0, Math.min(ancho - ANCHO_GATO, valor))
 // Las patitas llegan al extremo del lienzo; deja el gato entero dentro de la pantalla.
 function destinoBorde(lado){return lado==='izquierda'?0:ancho-ANCHO_GATO}
-function ir(destino,estado,lado=null,id=null){viaje={destino,estado,lado,id,corriendo:estado!=='cruzar'&&Math.abs(destino-x)>ancho*.4};maquina.despertar()}
-function irBorde(estado,lado=x<ancho/2?'izquierda':'derecha'){ir(destinoBorde(lado,estado),estado,lado)}
+// Sólo despierta si duerme: despertar a un gato despierto cortaba la animación en curso.
+function ir(destino,estado,lado=null,id=null){viaje={destino,estado,lado,id,corriendo:estado!=='cruzar'&&Math.abs(destino-x)>ancho*.4};if(maquina.durmiendo())maquina.despertar()}
+function irBorde(estado,lado=x<ancho/2?'izquierda':'derecha',id=null){ir(destinoBorde(lado,estado),estado,lado,id)}
+// Para pedir mimos se acerca al cursor si está en esta pantalla y se movió hace poco; si no, los pide donde está.
+function haciaElCursor(){
+ if(cursorX===null||cursorX<0||cursorX>ancho||performance.now()-cursorMovido>10000)return x
+ const lado=Math.sign(cursorX-centroDelGato())||1
+ return Math.abs(cursorX-centroDelGato())<120?x:limite(cursorX-ANCHO_GATO/2-lado*70)
+}
 function comidaAlAzar(){const comidas=['croquetas','pescado','leche'];if(comidas.includes(gatito.favorita))comidas.push(gatito.favorita);return comidas[Math.floor(Math.random()*comidas.length)]}
 function darDeComer(){api.cuidarGatito(comidaAlAzar())}
 function globoPausa(id){mostrarAlerta(id,{texto:'¿Nos estiramos un toque?',ms: 21000,boton:{texto:'Dale',accion:()=>api.cuidarGatito('pausa-respuesta','dale')},despues:()=>api.cuidarGatito('pausa-respuesta','despues')})}
@@ -330,8 +355,8 @@ function conductaPropia(e){
  if(arrastre||cayendo||salto||preparando||enFoco())return
  if(e.tipo==='hambre'){ir(limite(x+(x<ancho/2?35:-35)),'hambre');return}
  if(e.tipo==='dormir'){if(Math.random()<.6)irBorde('dormir');else ir(limite(ancho*(.2+Math.random()*.6)),'dormir');return}
- if(e.tipo==='mimar'){ir(x,'mimar',null,'propia:mimar:'+Date.now());return}
- if(e.tipo==='jugar'){maquina.pedir('aburrido',1,'propia:jugar:'+Date.now());return}
+ if(e.tipo==='mimar'){ir(haciaElCursor(),'mimar',null,'propia:mimar:'+Date.now());return}
+ if(e.tipo==='jugar'){if(Math.random()<.35)irBorde('rascar',undefined,'propia:jugar:'+Date.now());else maquina.pedir('aburrido',1,'propia:jugar:'+Date.now());return}
  if(e.tipo==='pasear'){const lado=Math.random()<.5?'izquierda':'derecha';irBorde(bordes[lado]&&puedeCruzar()&&Math.random()<.35?'cruzar':'rascar',lado);return}
  gestosPendientes.set(e.id,{evento:e,hasta:performance.now()+120000})
  maquina.pedir(e.tipo==='pausa'?'estirar':e.tipo,['saludo','festejo'].includes(e.tipo)?3:2,e.id)
@@ -350,31 +375,52 @@ function elegirAccion(ahora) {
  if(!arrastre&&!cayendo&&!viaje&&!impedido&&!trabajando&&!centroAbierto&&!maquina.durmiendo()&&(!accion||ahora>=accion.hasta||accion.reposo&&ahora-accion.desde>=20000)){
   if(gatito.energia<22)irBorde('dormir')
  }
- if(viaje&&(!accion||accion.reposo||ahora>=accion.hasta)){
+ // Al llegar en medio de un paso corta el ciclo de caminar: no sigue caminando en el lugar.
+ const llego=viaje&&['caminar','correr'].includes(accion?.estado)&&Math.abs(x-viaje.destino)<2
+ if(viaje&&(!accion||accion.reposo||ahora>=accion.hasta||llego)){
   viaje.destino=viaje.lado?destinoBorde(viaje.lado,viaje.estado):limite(viaje.destino)
   if(Math.abs(x-viaje.destino)<2){
-   x=viaje.destino;if(viaje.estado==='hambre')direccion=1;if(viaje.lado)direccion=viaje.lado==='izquierda'?-1:1
+   x=viaje.destino
+   if(llego&&ahora<accion.hasta)maquina.reiniciar('caminando')
+   maquina.descartar(p=>String(p.id||'').startsWith('viaje:'))
+   // Junto a la pared la mira; si quedó de espaldas a ella, se da vuelta con el giro.
+   if(viaje.lado&&(viaje.lado==='izquierda'?-1:1)!==direccion)maquina.pedir('girar',2,'giro-viaje')
    if(viaje.estado==='cruzar')preparando=viaje.lado
+   if(viaje.estado==='hambre')cuencoX=null
    maquina.pedir(viaje.estado==='cruzar'?'preparar-salto':viaje.estado==='mimar'?'espaldas':viaje.estado,2,viaje.estado==='hambre'?'hambre':viaje.id)
-
    viaje=null
-  } else {direccion=x<viaje.destino?1:-1;maquina.pedir(viaje.corriendo?'correr':'caminar',2,'viaje:'+ahora)}
+  } else {
+   // Antes de caminar hacia atrás se da vuelta con el giro, no con un espejo instantáneo.
+   const sentido=x<viaje.destino?1:-1,pendientes=maquina.pendientes()
+   if(sentido!==direccion){if(!pendientes.includes('girar'))maquina.pedir('girar',2,'giro-viaje')}
+   else if(!pendientes.includes('caminar')&&!pendientes.includes('correr'))maquina.pedir(viaje.corriendo?'correr':'caminar',2,'viaje:'+ahora)
+  }
  }
- const siguiente=maquina.paso(ahora,{trabajando,panel:centroAbierto,energia:viaje||impedido?80:gatito.energia,siesta:!viaje&&gatito.siestaHasta>Date.now()})
+ const animo={hambre:gatito.autonomia?.hambre===true,cansado:gatito.energia<35,contento:gatito.carino>=70&&gatito.saciedad>=50}
+ const siguiente=maquina.paso(ahora,{trabajando,panel:centroAbierto,energia:gatito.energia,ocupado:!!viaje||impedido,siesta:!viaje&&gatito.siestaHasta>Date.now(),animo})
  const quieto=siguiente.estado==='ocio'||siguiente.estado==='lamer'&&ahora>=siguiente.desde+siguiente.aseoMs
  const puedeMirar=!enFoco()&&!trabajando&&!centroAbierto&&!impedido&&!viaje&&!preparando&&!arrastre&&!cayendo&&!salto&&!maquina.durmiendo()&&quieto&&siguiente.reposo&&siguiente.poseInicial==='sentado'&&siguiente.poseFinal==='sentado'&&maquina.pendientes().length===0
  if(miradaCursor&&(!puedeMirar||ahora>=miradaCursor.hasta))miradaCursor=null
  if(!miradaCursor&&puedeMirar&&ahora>=proximaMirada&&siguiente.hasta-ahora>=2160&&cursorCerca&&ahora-cursorMovido<1000){
-  direccion=cursorX<centroDelGato()?-1:1
-  miradaCursor={desde:ahora,hasta:ahora+2160}
+  const lado=cursorX<centroDelGato()?-1:1
   proximaMirada=ahora+8000
-  registrarSecuencia({estado:'mirar-cursor',poseInicial:'sentado',poseFinal:'sentado',motivo:'mirada-en-reposo'},ahora)
+  // Si el cursor quedó detrás, primero se da vuelta (parpadeo y cola) y mira en el bloque siguiente.
+  if(lado!==direccion){maquina.pedir('girar',2,'giro-cursor');proximaMirada=ahora+1200}
+  else{
+   // Muy cerca le tira un zarpazo; un poco más lejos sólo lo mira.
+   const ciclo=Math.abs(cursorX-centroDelGato())<ANCHO_GATO*.9?'zarpazo':'mirar-cursor'
+   miradaCursor={desde:ahora,hasta:ahora+duracion(comportamientoGatito.ciclos[ciclo]),ciclo}
+   registrarSecuencia({estado:ciclo,poseInicial:'sentado',poseFinal:'sentado',motivo:'mirada-en-reposo'},ahora)
+  }
  }
  if(siguiente!==ultimaSecuencia){
   registrarSecuencia(siguiente,ahora)
-  if(siguiente.id?.startsWith('propia:')&&['espaldas','aburrido'].includes(siguiente.estado))api.cuidarGatito('conducta-hecha',siguiente.estado==='espaldas'?'mimar':'jugar')
+  // Pedir mimos no se cumple solo: hace falta que lo toquen mientras está de espaldas.
+  if(siguiente.id?.startsWith('propia:')&&['aburrido','rascar'].includes(siguiente.estado))api.cuidarGatito('conducta-hecha','jugar')
   const p=gestosPendientes.get(siguiente.id)
   if(p){gestosPendientes.delete(siguiente.id);if(p.evento.tipo==='pausa')globoPausa(siguiente.id);else mostrarAlerta(siguiente.id,{texto:p.evento.texto,ms: 4000})}
+  // Desde el segundo pedido de comida maúlla bajito.
+  if(siguiente.estado==='hambre'&&(gatito.autonomia?.intentos||0)>=2)maullar()
  }
  if(siguiente!==ultimaSecuencia&&siguiente.estado==='girar')siguiente.direccionInicial=direccion
  if(siguiente!==ultimaSecuencia&&siguiente.estado==='mimar')ronronear()
@@ -400,14 +446,12 @@ function cuadro(ahora){
    const previo=accion.tramos.filter(t=>t.tipo==='transicion').flatMap(t=>t.cuadros).reduce((n,c)=>n+c[1],0)
    if(ahora-accion.desde>=previo)x+=Math.sign(viaje.destino-x)*Math.min(Math.abs(viaje.destino-x),delta*(accion.estado==='correr'?.24:.12))
   }
-  mostrarCuadro(miradaCursor?cuadroDeSecuencia(comportamientoGatito.ciclos['mirar-cursor'],ahora-miradaCursor.desde):cuadroDeSecuencia(accion.cuadros,ahora-accion.desde)||accion.cuadros.at(-1)[0])
+  mostrarCuadro(miradaCursor?cuadroDeSecuencia(comportamientoGatito.ciclos[miradaCursor.ciclo],ahora-miradaCursor.desde)||'sentado-quieto':cuadroDeSecuencia(accion.cuadros,ahora-accion.desde)||accion.cuadros.at(-1)[0])
  }
  if(!arrastre&&!salto)x=limite(x)
  $('alertas').hidden=!!salto
  if(!salto&&ahora<maullidoHasta)mostrarCuadro(cuadroDeSecuencia(comportamientoGatito.ciclos.maullar,ahora-(maullidoHasta-400))||'maullar2')
- const comida=['croquetas','pescado','leche'].includes(accion?.estado)
- $('cuenco-pedido').hidden=enFoco()||/^empujar/.test(cuadroActual)||(!comida&&accion?.estado!=='hambre')
- if(!$('cuenco-pedido').hidden&&$('cuenco-pedido').lleno!==comida){$('cuenco-pedido').lleno=comida;$('cuenco-pedido').src='sprites/cuenco-'+(comida?'lleno':'vacio')+'.png';$('cuenco-pedido').alt=comida?'Cuenco lleno':'Cuenco vacío'}
+ ubicarCuenco()
  const f=gatito.foco,seg=f?Math.max(0,Math.ceil((f.hasta-Date.now())/1000)):0
  $('foco-franja').hidden=!f||f.fase==='listo';$('foco-franja').textContent=f&&f.fase!=='listo'?(f.fase==='foco'?'Foco ':'Descanso ')+String(Math.floor(seg/60)).padStart(2,'0')+':'+String(seg%60).padStart(2,'0'):''
  ubicarFranjaFoco()
@@ -420,6 +464,8 @@ function cuadro(ahora){
  }
  const orientacion=accion?.estado==='girar'&&['girar1','girar2','girar3'].includes(cuadroActual)?accion.direccionInicial:direccion
  $('gato').classList.toggle('izquierda',orientacion<0)
+ const pista=hambriento()?'Tengo hambre: tocá el cuenco para darme de comer':accion?.estado==='espaldas'?'Tocame para darme mimos':'Tocame para abrir el centro de mando'
+ if($('gato').title!==pista)$('gato').title=pista
  if(alertas.size){
   ubicarGlobo($('alertas'))
   $('alertas').style.setProperty('--aire-gato', (imagenes[cuadroActual]?.aireSuperior || 0) + 'px')
@@ -442,7 +488,9 @@ const centroDelGato=()=>Math.round(x+ANCHO_GATO/2)
 api.alRecibirCentroVisible(({visible,lado})=>{
  centroAbierto=visible;ladoDelCentro=lado==='derecha'?'derecha':'izquierda'
  const mirar=ladoDelCentro==='izquierda'?-1:1
- if(!enFoco()&&visible&&mirar!==direccion)maquina.pedir('girar',1,'giro-panel')
+ // Se gira enseguida al abrirlo; si se cierra antes, el giro pendiente se olvida.
+ if(!enFoco()&&visible&&mirar!==direccion)maquina.pedir('girar',2,'giro-panel')
+ if(!visible)maquina.cancelar('giro-panel')
 })
 api.alRecibirPedidoPosicion(()=>api.alternarCentro(centroDelGato()))
 api.alReubicarCentro(()=>api.reubicarCentro(centroDelGato()))
@@ -465,7 +513,7 @@ $('gato').addEventListener('mousedown',evento=>{
 addEventListener('mouseup',evento=>{
  if(!arrastre)return
  const fueClic=!arrastre.movido;arrastre=null;api.arrastrarGatito(false);$('gato').classList.remove('arrastrando')
- if(fueClic&&accion?.estado==='hambre'){darDeComer()}else if(fueClic){maullar();if(!maquina.durmiendo()&&['ocio','lamer','panel','maullar'].includes(accion?.estado))maullidoHasta=performance.now()+400;api.alternarCentro(centroDelGato())}else{cayendo=true;accion=null}
+ if(fueClic&&accion?.estado==='hambre'){darDeComer()}else if(fueClic&&accion?.estado==='espaldas'){api.cuidarGatito('mimar')}else if(fueClic){maullar();if(!maquina.durmiendo()&&['ocio','lamer','panel','maullar'].includes(accion?.estado))maullidoHasta=performance.now()+400;api.alternarCentro(centroDelGato())}else{cayendo=true;accion=null}
  hacerTocable(encima(evento))
 })
 let descansoAvisado=false
@@ -473,19 +521,20 @@ function ronronear(){
  try{audio=audio||new AudioContext();audio.resume();const o=audio.createOscillator(),v=audio.createGain(),t=audio.currentTime;o.frequency.value=38;v.gain.setValueAtTime(.0001,t);v.gain.exponentialRampToValueAtTime(.012,t+.2);v.gain.exponentialRampToValueAtTime(.0001,t+1.5);o.connect(v).connect(audio.destination);o.start();o.stop(t+1.6)}catch{/* sin audio */}
 }
 api.alRecibirCuidado(cuidado=>{
- if(cuidado.aceptado===false){mostrarAlerta('rechazo:'+numeroDeAviso++,{texto:cuidado.texto,ms: 4000});return}
+ if(cuidado.aceptado===false){mostrarAlerta('rechazo:'+numeroDeAviso++,{texto:cuidado.texto,ms: 4000});if(!enFoco()&&!maquina.durmiendo())maquina.pedir('duda',2,'duda:'+numeroDeAviso);return}
  if(enFoco())return
  const estado=typeof cuidado==='string'?cuidado:cuidado.accion
  viaje=null
- if(estado==='mimar'){maquina.cancelar(accion?.id);maquina.reiniciar();accion=null;ronronear();corazonHasta=performance.now()+2000;$('corazon-caricia').textContent='♥';$('corazon-caricia').classList.remove('acariciado');void $('corazon-caricia').offsetWidth;$('corazon-caricia').classList.add('acariciado')}
+ // Sólo se corta la secuencia en curso: los demás pedidos sin id (comida, aterrizaje) siguen en la cola.
+ if(estado==='mimar'){if(accion?.id)maquina.cancelar(accion.id);maquina.reiniciar();accion=null;ronronear();corazonHasta=performance.now()+2000;$('corazon-caricia').textContent='♥';$('corazon-caricia').classList.remove('acariciado');void $('corazon-caricia').offsetWidth;$('corazon-caricia').classList.add('acariciado')}
  if(estado==='siesta')irBorde('dormir');else if(estado==='rascar')irBorde('rascar');else maquina.pedir(estado,3)
- if(['croquetas','pescado','leche'].includes(estado))cerrarAlerta('hambre')
+ if(['croquetas','pescado','leche'].includes(estado)){cerrarAlerta('hambre');cuencoX=null;if(gatito.autonomia)gatito={...gatito,autonomia:{...gatito.autonomia,hambre:false}};if(!cuidado.favorita)maquina.pedir('satisfecho',3)}
  if(cuidado.favorita){maquina.pedir('mimar',3);mostrarAlerta('favorita:'+numeroDeAviso++,{texto:cuidado.texto||'¡Mi favorita!',ms: 4000})}
 })
 api.alRecibirArrastre(({x:nuevaX,soltado,aterrizo,saltando,fase,lado,cancelado})=>{
  const volaba=!!salto
  if(saltando){salto={fase};direccion=lado==='izquierda'?-1:1;viaje=null;accion=null;hacerTocable(false)}
- if(soltado||aterrizo||cancelado){salto=null;preparando=null}
+ if(soltado||aterrizo||cancelado){salto=null;preparando=null;cuencoX=null}
  if(aterrizo||cancelado){for(const [id,datos] of globosEnEspera)mostrarAlerta(id,datos);globosEnEspera.clear()}
  if(cancelado){maquina.reiniciar('agazapado');accion=null}
  x=nuevaX-ANCHO_GATO/2
@@ -544,6 +593,19 @@ api.alCerrarMenu(cerrarMenu)
 addEventListener('mousedown',e=>{if($('menu-rapido').hidden||e.button===2)return;if(![...$('menu-rapido').children].some(b=>{const r=b.getBoundingClientRect();return e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom}))cerrarMenu()})
 
 let datosTarjeta={sesiones:[],reuniones:[]}
+// El cuenco vacío queda en el piso donde pidió comida hasta que coma: aunque se aleje, sigue ahí.
+function hambriento(){return (gatito.autonomia?.hambre===true||accion?.estado==='hambre')&&!enFoco()}
+function ubicarCuenco(){
+ const cuenco=$('cuenco-pedido')
+ if(!hambriento())cuencoX=null
+ const quieto=!viaje&&!arrastre&&!cayendo&&!salto&&!preparando&&!maquina.durmiendo()&&!['caminar','correr','girar'].includes(accion?.estado)
+ if(hambriento()&&cuencoX===null&&quieto)cuencoX=Math.max(0,Math.min(ancho-42,direccion>0?x+ANCHO_GATO*.66:x-6))
+ // Los dibujos de comer y de empujar traen su propio cuenco.
+ const propio=/^(empujar|croquetas|leche|pedir)/.test(cuadroActual||'')||['croquetas','pescado','leche','satisfecho'].includes(accion?.estado)
+ cuenco.hidden=cuencoX===null||propio
+ if(!cuenco.hidden)cuenco.style.left=Math.round(cuencoX)+'px'
+ for(const b of $('menu-rapido').children)if(b.dataset.accion==='comer')b.classList.toggle('pide',hambriento())
+}
 function ubicarFranjaFoco(){$('foco-franja').style.left=Math.max(64-x,Math.min(ANCHO_GATO/2,ancho-64-x))+'px'}
 
 function ubicarGlobo(nodo){const mitad=(nodo.getBoundingClientRect().width||nodo.offsetWidth)/2+4;nodo.style.left=Math.max(mitad-x,Math.min(ANCHO_GATO/2,ancho-mitad-x))+'px'}
