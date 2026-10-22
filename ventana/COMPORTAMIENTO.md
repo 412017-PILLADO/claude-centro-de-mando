@@ -47,7 +47,7 @@ Todas las poses son alcanzables entre sí. El giro usa girar1, girar2 y girar3 (
 
 ## Dormir sin bucles
 
-Una sola secuencia: acostarse → respirar con zzz → despertar → estirarse. No se usan sueno, durmiendo ni bolita como ciclos alternativos. Antes de acostarse bosteza y hace uno o dos cabeceos sentado. La respiración alterna cuadros cada 900 ms. Duerme un mínimo de quince minutos y se despierta al recuperar al menos 75 de energía, una vez terminada la siesta solicitada. El ocio, el panel y el hambre no lo despiertan. Una reunión, una sesión que termina, un cuidado, un saludo o un festejo sí pueden despertarlo antes. Después tiene cinco minutos de vigilia. Los eventos esperan a que termine la entrada a acostarse.
+Una sola secuencia: acostarse → respirar con zzz → despertar → estirarse. No se usan durmiendo ni bolita como ciclos alternativos; sueno sólo aparece como gesto de cansancio en el reposo sentado. Antes de acostarse bosteza y hace uno o dos cabeceos sentado. La respiración recorre respirar1–3 cada 900 ms en bloques de 30–60 s; descansado se despierta en el momento, sin esperar el fin del bloque. Duerme un mínimo de quince minutos y se despierta al recuperar al menos 75 de energía, una vez terminada la siesta solicitada. El ocio, el panel y el hambre no lo despiertan. Una reunión, un cuidado, un saludo o un festejo sí pueden despertarlo antes. Una sesión que termina no lo despierta: sólo aparece el globo. Después tiene cinco minutos de vigilia. Los eventos esperan a que termine la entrada a acostarse.
 
 El renderer renueva el descanso cada treinta segundos mientras muestra los cuadros de sueño; así no vence el permiso de un minuto de la vida persistente. Los pedidos de siesta consumidos no quedan pendientes para disparar otro sueño al despertar.
 
@@ -76,7 +76,7 @@ El blur cierra el panel salvo mientras se redimensiona o si el cursor está sobr
 | Necesidad | Entrada | Salida / histéresis | Conducta y espera |
 | --- | --- | --- | --- |
 | Energía | <22 | ≥75; sueño mínimo de 15 min | Camina a un lugar, 60% de las veces al borde más cercano, y recorre acostarse → respirar → despertar → estirarse. El respaldo del renderer también atiende energía baja. |
-| Cariño | <30 | ≥55 | Se acerca al cursor (consulta cada 2 s) y ronronea; +12 cariño por iniciativa y +0,15 mimoso. |
+| Cariño | <30 | ≥55 | Camina hacia el cursor si está en su pantalla y se movió hace poco, y se pone de espaldas. No se cumple solo: tocarlo de espaldas es Mimar. +0,15 mimoso por iniciativa. |
 | Aburrimiento | ≥60; sube 18/h | ≤20 | Juega con el ovillo; baja 45 y suma 0,15 juguetón. Los juegos manuales también bajan 45. |
 | Hambre | Saciedad <25 + glotón/20 (25–30) | Saciedad ≥45 | Se sienta junto a un cuenco temporal, `pedir1–2` y un emote 🐟 de 9 s. El pescadito abre Gatito con Comer desplegado. Repite tras 10, 20, 40, 80 y 120 min; luego mantiene 120. Comer hasta ≥45 reinicia la espera. |
 
@@ -86,7 +86,7 @@ Las iniciativas propias esperan 5 min entre sí. No interrumpen el sueño para p
 
 En ocio se elige entre jugar, mimar, dormir o pasear hasta uno de los extremos del `workArea` elegido. El viaje usa `caminar` y las transiciones del grafo; sólo al llegar empieza `rascar` o `dormir`. El lado izquierdo usa dirección −1 y el derecho +1. El arrastre cancela el viaje; al cambiar el ancho se recalcula el destino.
 
-Para rascar se reutiliza la hoja 8 sin reescribirla: el límite de la pantalla pasa por el 59% del lienzo mirando a la derecha y por el 41% al espejar. Una máscara CSS recorta el poste y su base; quedan las patas contra la pared del monitor. No se generaron hojas ni prompts nuevos. Se conservan `arte/cuidados.json` y los prompts existentes para el cortador. El cuenco vacío se muestra mientras pide comida y el lleno durante croquetas, pescado o leche; no queda puesto en la pantalla.
+Para rascar se reutiliza la hoja 8 sin reescribirla: el límite de la pantalla pasa por el 59% del lienzo mirando a la derecha y por el 41% al espejar. No hay máscara: rasca sólo junto a la pared del monitor. No se generaron hojas ni prompts nuevos. Se conservan `arte/cuidados.json` y los prompts existentes para el cortador. El cuenco de afuera es el vacío: queda en el piso mientras tenga hambre (ver «Revisión de vida»). Croquetas y leche traen su propio cuenco dibujado.
 
 ## Rutina, racha y aniversarios
 
@@ -128,7 +128,7 @@ No se ejecutan Electron ni el cortador en el sandbox. No hubo hojas nuevas ni se
 
 ## Séptima tanda: simplificar y consultar al pasar el mouse
 
-El centro conserva solo la vista de utilidad. El hover del gato muestra nombre, foco, reunión y sesiones; sus necesidades permanecen internas.
+El centro conserva solo la vista de utilidad. La tarjeta de hover se retiró; el título del gato dice si tiene hambre o pide mimos.
 
 La versión 4 de gatito.json descarta accesorio/desbloqueados y entradas de diario cuyo id comienza con accesorio-. Conserva nombre, pelaje, necesidades, cuidados, favorita, foco, rasgos y autonomía. Los aniversarios siguen con aviso y diario, sin gorrito. No se generan sprites nuevos.
 
@@ -188,7 +188,7 @@ Antes del primer dormir, la máquina llega por el grafo a sentado, ejecuta boste
 
 El hambre inicia una caminata corta; al llegar mira al cuenco vacío mientras pide. El cuenco permanece durante el pedido, captura el mouse y acepta clic, Enter o Espacio. Comer elige entre croquetas/pescado/leche con pesos 1/1/1 y una posibilidad adicional para la favorita. La animación aceptada reemplaza el pedido; un rechazo se dice durante 3 s.
 
-La iniciativa de mimos viaja y entra por sentado → espaldas1 → espaldas2 en la pose espaldas. Alterna esos dos cuadros mirando sobre el hombro. El cuidado Mimar usa la arista inversa espaldas2 → espaldas1 → sentado antes de ronronear1–2. La iniciativa de juego mira alrededor (mirar1/mirar2) desde sentado y encola rascar la pared o jugar con el ovillo; el grafo pasa por parado o agazapado según corresponda.
+La iniciativa de mimos viaja y entra por sentado → espaldas1 → espaldas2 en la pose espaldas. Alterna esos dos cuadros mirando sobre el hombro. El cuidado Mimar usa la arista inversa espaldas2 → espaldas1 → sentado antes de ronronear1–2. La iniciativa de juego va a rascar la pared (35%) o mira alrededor (mirar1/mirar2) desde sentado y encola el ovillo o el ratón; el grafo pasa por parado o agazapado según corresponda.
 
 Los sprites cabecear1–3, empujar1–4 y panza1–2 están cargados como ciclos con extremos de pose explícitos. Antes de acostarse, cuando parte de parado o caminando, alterna cabecear de pie (4,5 s, parado → parado) con el bostezo sentado existente. Después recorre sentado → acostado. Si parte de sentado conserva bostezo y cabeceo sentado. Las respiraciones posteriores no repiten el gesto.
 
@@ -255,3 +255,28 @@ Los pedidos de prioridad ≥2 interrumpen el reposo en el próximo paso, conserv
 La mirada al cursor se superpone durante 2160 ms al bloque sentado, incluso en la quietud posterior al aseo, sin reiniciar ni extender su plazo. Conserva los bloqueos por sueño, foco, trabajo, panel, viaje, arrastre y caída. El registro anota mirar-cursor con motivo mirada-en-reposo; no registra cada parpadeo ni cada movimiento de cola como una secuencia. Una alerta o cuidado cancela la superposición.
 
 Pruebas de esta ampliación: diez minutos sin eventos generan 20, 10 y 7 secuencias con azar controlado en ambos extremos y el punto medio. Se verifican duración mínima de bloques, variación de duración, aseo de 8–15 s separado ≥120 s, interrupción por prioridad 2, espera de prioridad 1, sueño mínimo de 15 minutos y mirada que conserva identidad y vencimiento del bloque. Ambos scripts pasan; verificar-interfaz también ejecuta y aprueba verificar-panel. Se mantienen los 127 hashes anteriores. No se ejecutó Electron.
+
+## Revisión de vida (octubre 2026)
+
+Surgió de leer el registro real (`gatito-registro.jsonl`) y `gatito.json`: el gato llevaba 31 h sin comer, casi no expresaba necesidades y en una siesta con Claude trabajando rearmaba el reposo en cada cuadro.
+
+| Tema | Antes | Ahora |
+| --- | --- | --- |
+| Siesta con Claude trabajando | El reposo se rearmaba en cada cuadro (cientos de secuencias por segundo, clavado en pensar1) | Sólo corta el reposo si de verdad puede dormirse |
+| Energía | Con una alerta se le pasaba 80 y se despertaba a los 15 min aunque estuviera cansado | Se pasa la energía real y `ocupado` impide sólo empezar a dormir |
+| Alerta de sesión | Callaba las necesidades 10 min después de cada turno de Claude (casi siempre) | Las calla 90 s (`ALERTA_FRESCA_MS` en main) |
+| Llegada de un viaje | Seguía caminando en el lugar hasta terminar el ciclo | Corta el ciclo y frena al llegar |
+| Cambio de sentido | Espejo instantáneo al caminar, al mirar el cursor y al llegar | Se da vuelta con girar (o el giro sentado) antes |
+| Cuenco | Cuenco rojo fijo a la derecha, encima del cuenco dibujado | Queda en el piso adelante del gato mientras tenga hambre, a escala del gato; se oculta en los dibujos que traen su cuenco |
+| Aburrido | Podía rascar el aire en medio de la pantalla | Juega en el lugar (ovillo o ratón); rascar sólo junto a la pared |
+| Giro al panel | Prioridad 1: hasta 20 s tarde y quedaba pendiente al cerrar | Prioridad 2 y se cancela al cerrar |
+| Mimar desde el menú | `cancelar(undefined)` vaciaba los pedidos sin id (y podía tirar TypeError) | `cancelar` sin id no hace nada |
+| Cruce de pantalla | `armarEstado` consumía eventos de la rutina y se perdían | Usa `contextoDelGatito` sin observar la vida |
+| Cuadro nuevo | El gato desaparecía mientras se recoloreaba un dibujo por primera vez | Queda el cuadro anterior hasta que carga |
+| sentado-quieto | Ojo cercano deforme, sin nariz | Ojos y nariz copiados de cola-nueva, alineados a la cabeza |
+
+Animaciones nuevas con dibujos que ya existían: reunión con atento → alerta (!); sesión que espera con atento; sesión terminada con salto y tilde (listo); duda (?) al rechazar un cuidado; tablet alternada con pensar mientras Claude trabaja (corrida 20 px de lienzo al mostrarse); respiración al dormir; ovillo3 en el juego; contento al final de mimar; satisfecho (se lava la cara) después de comer; estirarse en la pausa; agazapado moviendo la cola antes de saltar; zarpazo (pata1–2) si el cursor pasa muy cerca.
+
+El ánimo agrega un gesto al reposo sentado cada 20–40 s: con hambre maúlla, cansado (energía < 35) cabecea con sueno, contento (cariño ≥ 70 y saciedad ≥ 50) cierra los ojos. Desde el segundo pedido de comida maúlla bajito con sonido. Con hambre el botón Comer del abanico late.
+
+Verificación: `npm test` con pruebas nuevas para cada punto; capturas reales en Electron con `CENTRO_GUION` (JS en la mascota) y `CENTRO_ESPERA`; dos minutos de la app aislada con el registro sin ráfagas.

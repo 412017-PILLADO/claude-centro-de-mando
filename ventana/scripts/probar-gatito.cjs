@@ -62,13 +62,14 @@ maquina = crearMaquina()
 for (let i=0;i<100;i++) {
   const accion = maquina.paso(i * 10000, {trabajando:true, panel:true, hambre:true, energia:0})
   assert.equal(accion.estado, 'pensar')
-  assert.ok(accion.cuadros.every(([n]) => !/caminar|correr|tablet|espaldas/.test(n)))
+  assert.ok(accion.cuadros.every(([n]) => !/caminar|correr|espaldas/.test(n)))
 }
 for (const estado of ['comer','mimar','jugar','siesta']) {
   maquina = crearMaquina(); maquina.pedir(estado,3)
   assert.ok(maquina.paso(0,{panel:true}).cuadros.every(([n])=>!n.startsWith('espaldas')))
 }
-for (const cuadros of Object.values(ciclos)) assert.ok(cuadros.every(([n])=>n !== 'tablet'))
+// La tablet sólo aparece en el bloque de trabajo.
+for (const [nombre,cuadros] of Object.entries(ciclos)) assert.ok(nombre==='tablet'||cuadros.every(([n])=>n !== 'tablet'),nombre)
 assert.equal(ciclos.pensar.reduce((s,c)=>s+c[1],0),20000)
 assert.ok(require('../src/ui/comportamiento').camino('cayendo','sentado').flatMap(t=>t.cuadros).some(([n])=>n==='aterrizar1'))
 assert.ok(require('../src/ui/comportamiento').camino('cayendo','sentado').flatMap(t=>t.cuadros).some(([n])=>n==='aterrizar2'))
@@ -87,7 +88,7 @@ for (const {workArea:area} of displays) for (const offset of [64,150,area.width/
  assert.ok(panel.x >= area.x && panel.x+panel.width <= area.x+area.width)
  assert.ok(panel.x+panel.width <= centro-51 || panel.x >= centro+51, 'no tapa al gato')
 }
-console.log('Máquina y monitores verificados: prioridades, cierre sentado, cuidados visibles, trabajo sin paseos, sin tablet, dos aterrizajes y respaldo de monitor.')
+console.log('Máquina y monitores verificados: prioridades, cierre sentado, cuidados visibles, trabajo sin paseos, tablet sólo en el trabajo, dos aterrizajes y respaldo de monitor.')
 
 // Cancelar corta el pedido actual y conserva su extremo para el siguiente camino.
 {
@@ -409,7 +410,8 @@ for(const nombre of ['pared1','pared2','pared3','pared4']){
   screen:{getAllDisplays:()=>displays,getCursorScreenPoint:()=>({x:1900,y:1000}),getDisplayNearestPoint:p=>p.x>=1920?b:a},
   require:n=>n==='./monitores'?g:require('../src/caida'),
   monitorMascota:()=>guardado===1?a:b,zonaMascota:()=>{const d=guardado===1?a:b;return {x:d.workArea.x,y:d.workArea.y+d.workArea.height-340,width:d.workArea.width,height:340}},
-  config:()=>({set:c=>{guardado=c['mascota.monitor']}}),vecinosCache:null,enviarEstado:()=>actualizaciones++,armarEstado:()=>({contextoGatito:{},gatito:{}}),
+  config:()=>({set:c=>{guardado=c['mascota.monitor']}}),vecinosCache:null,enviarEstado:()=>actualizaciones++,fuentesVisibles:()=>({}),leerSesiones:()=>[],leerReuniones:()=>[],contextoDelGatito:()=>({}),
+  vida:{leer:()=>({}),observar:()=>{throw Error('cruzar no debe consumir eventos de la rutina')}},
   ipcMain:{on:(n,fn)=>handlers[n]=fn},setInterval:fn=>{timers.set(++id,fn);return id},clearInterval:n=>timers.delete(n)})
  vmSalto.runInContext(fuente.slice(fuente.indexOf('let arrastreGlobal ='),fuente.indexOf('function terminarArrastre()')),ctx)
  handlers['gatito-cruzar']({sender:{}},'derecha');assert.equal(timers.size,0,'valida sender')
@@ -547,4 +549,53 @@ for(const nombre of ['pared1','pared2','pared3','pared4']){
   sueno.paso(15*60000+10000,{energia:80});assert.equal(sueno.durmiendo(),false)
  }finally{Math.random=original}
  console.log('Ritmo: 10 min de ocio = '+conteos.join('/')+' secuencias; bloques largos, aseo 8-15 s cada >=2 min, interrupcion real y sueno minimo 15 min: OK.')
+}
+
+// Revisión de vida: bugs del registro real y animaciones nuevas.
+{
+ const comp=require('../src/ui/comportamiento')
+ // Siesta pedida mientras Claude trabaja: el reposo no se rearma en cada cuadro.
+ let m=comp.crearMaquina(),previa=null,nuevas=0
+ for(let t=0;t<10000;t+=16){const s=m.paso(t,{trabajando:true,siesta:true,energia:60});if(s!==previa)nuevas++;previa=s}
+ assert.ok(nuevas<=2,'siesta con trabajo: '+nuevas+' secuencias en 10 s')
+ // Con la energía real baja no se despierta a los 15 minutos aunque esté ocupado.
+ m=comp.crearMaquina();m.pedir('dormir',2)
+ for(let t=0;t<16*60000;t+=1000)m.paso(t,{energia:30,ocupado:true})
+ assert.equal(m.durmiendo(),true,'cansado sigue durmiendo')
+ m.paso(16*60000,{energia:80});assert.equal(m.durmiendo(),false,'descansado se despierta')
+ // Ocupado no empieza a dormir aunque esté cansado.
+ m=comp.crearMaquina();m.paso(0,{energia:10,ocupado:true});assert.equal(m.durmiendo(),false)
+ // cancelar sin id no borra la cola ni rompe.
+ m=comp.crearMaquina();m.pedir('croquetas',3);m.pedir('soltar',6);m.cancelar(undefined);m.cancelar(null)
+ assert.deepEqual(m.pendientes().sort(),['croquetas','soltar'])
+ // Duerme respirando, en bloques largos.
+ m=comp.crearMaquina();m.reiniciar('acostado');m.pedir('dormir',2)
+ const sueno=m.paso(0,{energia:30})
+ assert.ok(sueno.cuadros.some(([n])=>n.startsWith('respirar')),'respira dormido')
+ assert.ok(sueno.hasta-sueno.desde>=30000,'el bloque de sueño dura al menos 30 s')
+ assert.ok(comp.ciclos.dormir.every(([n])=>n.startsWith('respirar')))
+ // Aburrido juega en el lugar: rascar sólo junto a la pared.
+ const original=Math.random
+ try{for(const azar of [0,.49,.5,.99]){Math.random=()=>azar;m=comp.crearMaquina();m.pedir('aburrido',1);const a=m.paso(0,{energia:80});assert.ok(!m.pendientes().includes('rascar'),'aburrido no rasca el aire');m.paso(a.hasta,{energia:80})}}finally{Math.random=original}
+ // Animaciones nuevas con dibujos que existen y extremos de pose correctos.
+ const ciclos=comp.ciclos
+ assert.ok(ciclos.reunion.some(([n])=>n==='alerta'));assert.ok(ciclos.atento.some(([n])=>n==='atento'))
+ assert.ok(ciclos.sesion.some(([n])=>n==='listo'));assert.ok(ciclos.duda.some(([n])=>n==='duda'))
+ assert.ok(ciclos.jugar.some(([n])=>n==='ovillo3'));assert.equal(ciclos.jugar.at(-1)[0],'ovillo1','el juego termina agachado')
+ assert.ok(ciclos['preparar-salto'].some(([n])=>n.startsWith('agazapado')));assert.equal(ciclos['preparar-salto'].at(-1)[0],'agachar3')
+ assert.ok(ciclos.mimar.some(([n])=>n==='contento'));assert.ok(ciclos.estirar.some(([n])=>n==='estirarse'))
+ assert.ok(ciclos.satisfecho.some(([n])=>n.startsWith('lamer')))
+ const sprites=new Set(fs.readdirSync(path.join(__dirname,'../src/ui/sprites')).map(n=>n.replace(/\.png$/,'')))
+ for(const [nombre,cuadros] of Object.entries(ciclos))for(const [n] of cuadros)assert.ok(sprites.has(n),nombre+': falta '+n)
+ // Trabajo alterna pensar y tablet; el ánimo agrega su gesto al reposo.
+ try{
+  Math.random=()=>0;m=comp.crearMaquina();const trabajo=m.paso(0,{trabajando:true,energia:80})
+  assert.ok(trabajo.cuadros.some(([n])=>n==='tablet')&&trabajo.cuadros.some(([n])=>n.startsWith('pensar')),'trabajo con tablet y pensar')
+  for(const [animo,dibujo] of [[{hambre:true},'maullar2'],[{cansado:true},'sueno'],[{contento:true},'contento']]){
+   Math.random=()=>.99;m=comp.crearMaquina();const ocio=m.paso(0,{energia:80,animo})
+   assert.ok(ocio.cuadros.some(([n])=>n===dibujo),JSON.stringify(animo)+' muestra '+dibujo)
+  }
+  m=comp.crearMaquina();assert.ok(!m.paso(0,{energia:80}).cuadros.some(([n])=>['sueno','contento','maullar2'].includes(n)),'sin ánimo, reposo tranquilo')
+ }finally{Math.random=original}
+ console.log('Vida: siesta sin bucle, energía real, cancelar sin id, respiración, aburrido sin rascar el aire, animaciones nuevas, tablet y ánimo: OK.')
 }

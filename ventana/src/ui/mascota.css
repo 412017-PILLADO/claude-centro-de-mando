@@ -40,6 +40,10 @@ body {
   transform: scaleX(-1);
 }
 
+/* Corrimiento de los dibujos que no quedaron centrados como sentado-quieto (lo fija mascota.js). */
+.gato img { translate: var(--corrimiento, 0px) 0; }
+.gato.izquierda img { translate: calc(-1 * var(--corrimiento, 0px)) 0; }
+
 /* --- globos de alerta: el gatito "habla" ------------------------------------ */
 
 .alertas {
@@ -210,7 +214,9 @@ body {
   }
 }
 
-.cuenco-pedido { position:absolute; bottom:0; left:70%; width:30px; height:25px; object-fit:contain; pointer-events:auto; cursor:pointer; }
+/* El PNG del cuenco usa el lienzo del gato (288 × 237): se muestra a la misma escala y se recorta al cuenco. */
+.cuenco-pedido { position:absolute; bottom:0; left:0; width:42px; height:20px; overflow:hidden; pointer-events:auto; cursor:pointer; }
+.cuenco-pedido img { position:absolute; left:-30px; bottom:0; height:84px; image-rendering:pixelated; pointer-events:none; }
 .cuenco-pedido[hidden] { display:none; }
 .globo.comida .globo-texto { display:none; }
 
@@ -332,3 +338,8 @@ body {
 .corazon-caricia {color:var(--acento)}
 .menu-rapido button {background:linear-gradient(rgba(255,255,255,.1),rgba(255,255,255,.1)),var(--reflejo),var(--vidrio)}
 .menu-rapido img {filter:drop-shadow(0 0 1px rgba(255,255,255,.8))}
+
+/* Con hambre, el botón Comer del abanico late despacio. */
+.menu-rapido button.pide { animation: pide 1.6s ease-in-out infinite; border-color: var(--ambar, #efc36f); }
+@keyframes pide { 50% { box-shadow: 0 0 0 4px #efc36f55, 0 3px 10px #0005; } }
+@media (prefers-reduced-motion: reduce) { .menu-rapido button.pide { animation: none; } }

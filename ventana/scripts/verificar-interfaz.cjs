@@ -21,13 +21,13 @@ function verificarSinVentana() {
   receptores.alRecibirEstado({ahora:Date.now(),sesiones:[{id:'1',status:'working',lastActivityAt:Date.now()}],reuniones:[],gatito:{color:'negro',energia:80,saciedad:80}})
   receptores.alRecibirCentroVisible({visible:true,lado:'derecha'})
   avanzar(1)
-  assert.match(vm.runInContext('cuadroActual',contexto),/^pensar/)
+  assert.match(vm.runInContext('cuadroActual',contexto),/^(pensar|tablet)/)
   receptores.alRecibirCuidado('pescado')
   avanzar(10000)
   avanzar(600)
   assert.match(vm.runInContext('cuadroActual',contexto),/^pescado/)
   assert.equal(vm.runInContext("accion.cuadros.some(([n])=>n.startsWith('espaldas'))",contexto),false)
-  for(let i=0;i<100;i++){avanzar(10000);assert.ok(!/tablet|caminar|correr|espaldas/.test(vm.runInContext('cuadroActual',contexto)))}
+  for(let i=0;i<100;i++){avanzar(10000);assert.ok(!/caminar|correr|espaldas/.test(vm.runInContext('cuadroActual',contexto)))}
   // La caída mantiene el dibujo en el aire y sólo aterriza al recibir el contacto.
   receptores.alRecibirArrastre({x:500,soltado:true,cayendo:true});avanzar(100)
   assert.equal(vm.runInContext('cuadroActual',contexto),'caer1')
@@ -157,12 +157,26 @@ function verificarSinVentana() {
   assert.ok(main.includes("ventana.on('blur'"));assert.ok(main.includes('cerrarPorBlur'))
   const html=fs.readFileSync(path.join(raiz,'index.html'),'utf8')
   for(const id of ['vista-centro','agarre-alto','agarre-ancho']) assert.ok(html.includes('id="'+id+'"'))
-  for(const tipo of ['mimar','jugar']){
+  // Pedir mimos no se cumple solo: espera que lo toquen mientras está de espaldas.
+  {
+    vm.runInContext("gatito.foco=null;gatito.energia=80;impedido=false;trabajando=false;centroAbierto=false;cursorX=null;viaje=null;maquina.vaciar();maquina.despertar();maquina.reiniciar('sentado');accion=null",contexto)
+    const hechas=()=>enviados.filter(([n,a])=>n==='cuidarGatito'&&a==='conducta-hecha').length,mimos=()=>enviados.filter(([n,a])=>n==='cuidarGatito'&&a==='mimar').length
+    const antes=hechas(),mimosAntes=mimos()
+    vm.runInContext("conductaPropia({tipo:'mimar'})",contexto)
+    for(let i=0;i<100&&vm.runInContext("accion?.estado",contexto)!=='espaldas';i++)avanzar(100)
+    assert.equal(vm.runInContext("accion?.estado",contexto),'espaldas','pide mimos de espaldas')
+    assert.equal(hechas(),antes,'pedir mimos no suma cariño solo')
+    vm.runInContext("arrastre={desfase:0,desdeX:0,desdeY:0,movido:false,desde:performance.now()}",contexto)
+    eventos.mouseup({clientX:-999,clientY:-999})
+    assert.equal(mimos(),mimosAntes+1,'tocarlo de espaldas lo mima')
+  }
+  for(const tipo of ['jugar']){
     vm.runInContext("gatito.foco=null;gatito.energia=80;impedido=false;trabajando=false;centroAbierto=false;cursorX=null;viaje=null;maquina.vaciar();maquina.despertar();maquina.reiniciar('sentado');accion=null",contexto)
     const contar=()=>enviados.filter(([n,a,v])=>n==='cuidarGatito'&&a==='conducta-hecha'&&v===tipo).length,antes=contar()
     vm.runInContext("conductaPropia({tipo:'"+tipo+"'})",contexto)
     assert.equal(contar(),antes,'espera al inicio real')
-    for(let i=0;i<100&&contar()===antes;i++)avanzar(100)
+    // Puede jugar en el lugar o ir a rascar la pared: el viaje tarda más.
+    for(let i=0;i<600&&contar()===antes;i++)avanzar(100)
     assert.equal(contar(),antes+1,tipo+' se registra al iniciar')
     vm.runInContext('accion=null',contexto);avanzar(1);avanzar(1)
     assert.equal(contar(),antes+1,'reanudar la secuencia no repite el efecto')
@@ -246,7 +260,7 @@ function verificarSinVentana() {
   prepararCruce()
   vm.runInContext("azarOriginal=Math.random;Math.random=()=>0;conductaPropia({tipo:'pasear'});Math.random=azarOriginal",contexto)
   assert.equal(vm.runInContext('viaje.estado',contexto),'cruzar')
-  avanzar(1);avanzar(1500)
+  avanzar(1);for(let i=0;i<40&&!enviados.some(([n])=>n==='cruzarPantalla');i++)avanzar(100)
   assert.equal(enviados.filter(([n])=>n==='cruzarPantalla').length,1)
   avanzar(100);avanzar(1000)
   assert.equal(enviados.filter(([n])=>n==='cruzarPantalla').length,1)
@@ -286,7 +300,7 @@ function verificarSinVentana() {
   console.log('Alerta sin barra: duración real y refresco sin reiniciar el plazo: OK.')
   assert.equal(vm.runInContext("alertas.get('duracion:prueba').barra",contexto),undefined)
   assert.ok(!fs.readFileSync(path.join(raiz,'mascota.css'),'utf8').includes('globo-tiempo'))
-  const prepararMirada=()=>vm.runInContext("maquina.vaciar();maquina.despertar();maquina.paso(performance.now()+1e9,{energia:80});maquina.reiniciar('sentado');gatito={energia:80};trabajando=false;centroAbierto=false;impedido=false;viaje=null;preparando=null;arrastre=null;cayendo=false;salto=null;cerrarMenu();proximaMirada=0;cursorMovido=performance.now();cursorCerca=true;cursorX=0;accion={estado:'ocio',poseFinal:'sentado',hasta:0};ultimaSecuencia=null",contexto)
+  const prepararMirada=()=>vm.runInContext("maquina.vaciar();maquina.despertar();maquina.paso(performance.now()+1e9,{energia:80});maquina.reiniciar('sentado');gatito={energia:80};trabajando=false;centroAbierto=false;impedido=false;viaje=null;preparando=null;arrastre=null;cayendo=false;salto=null;cerrarMenu();miradaCursor=null;proximaMirada=0;cursorMovido=performance.now();cursorCerca=true;x=600;direccion=-1;cursorX=400;accion={estado:'ocio',poseFinal:'sentado',hasta:0};ultimaSecuencia=null",contexto)
   prepararMirada();avanzar(1)
   assert.equal(vm.runInContext('accion.estado',contexto),'ocio')
   assert.equal(vm.runInContext('cuadroActual',contexto),'mirar1')
@@ -298,6 +312,16 @@ function verificarSinVentana() {
   assert.equal(bloqueMirada.hasta,finBloqueMirada,'la mirada conserva el plazo del bloque')
   assert.equal(vm.runInContext('miradaCursor',contexto),null)
   assert.ok(vm.runInContext("registroGatito.some(e=>e.motivo==='mirada-en-reposo')",contexto))
+  // Cursor detrás: primero se da vuelta con el giro, sin espejo instantáneo.
+  prepararMirada();vm.runInContext('cursorX=1000',contexto);avanzar(1)
+  assert.equal(vm.runInContext('miradaCursor',contexto),null,'detrás no mira de golpe')
+  assert.equal(vm.runInContext('direccion',contexto),-1,'no se espeja de golpe')
+  for(let i=0;i<10;i++)avanzar(100)
+  assert.equal(vm.runInContext('direccion',contexto),1,'el giro lo da vuelta')
+  // Muy cerca le tira un zarpazo.
+  prepararMirada();vm.runInContext('cursorX=centroDelGato()-40',contexto);avanzar(1)
+  assert.equal(vm.runInContext('miradaCursor?.ciclo',contexto),'zarpazo')
+  assert.equal(vm.runInContext('cuadroActual',contexto),'pata1')
   for(const bloqueo of ['cursorCerca=false','cursorMovido=-Infinity','trabajando=true','gatito.foco={fase:"foco"}','cayendo=true','arrastre={movido:true,desde:0}','viaje={estado:"rascar",destino:900}']){
     prepararMirada();vm.runInContext(bloqueo,contexto);avanzar(1)
     assert.equal(vm.runInContext('miradaCursor',contexto),null,bloqueo)
@@ -306,6 +330,59 @@ function verificarSinVentana() {
   nodos.get('menu-rapido').children[1].onclick()
   assert.ok(enviados.some(([n,a])=>n==='cuidarGatito'&&a==='mimar'))
   console.log('Mirada al cursor: orientacion, duracion, ocio, bloqueos y Mimar en menu: OK.')
+  // Revisión de vida: viajes, giros, cuenco, panel, sesiones dormido y dudas.
+  {
+    const limpio="maquina.vaciar();maquina.despertar();maquina.paso(performance.now()+1e9,{energia:80});maquina.reiniciar('sentado');gatito={energia:80,saciedad:80,carino:50};trabajando=false;centroAbierto=false;impedido=false;viaje=null;preparando=null;arrastre=null;cayendo=false;salto=null;miradaCursor=null;cursorCerca=false;cuencoX=null;accion=null;ultimaSecuencia=null;alertas.clear()"
+    // Gira antes de caminar hacia atrás y no se espeja de golpe.
+    vm.runInContext(limpio+";x=900;direccion=1;ir(500,'rascar')",contexto)
+    let vioGiro=false,caminoMirandoAtras=false
+    for(let i=0;i<600&&vm.runInContext('!!viaje',contexto);i++){
+      avanzar(16)
+      const estado=vm.runInContext('accion?.estado',contexto)
+      if(estado==='girar')vioGiro=true
+      if(['caminar','correr'].includes(estado)&&vm.runInContext('direccion',contexto)!==-1)caminoMirandoAtras=true
+    }
+    assert.ok(vioGiro,'se da vuelta antes de caminar');assert.equal(caminoMirandoAtras,false,'camina mirando hacia donde va')
+    // Al llegar no sigue caminando en el lugar.
+    assert.equal(vm.runInContext('Math.round(x)',contexto),500)
+    assert.ok(!['caminar','correr'].includes(vm.runInContext('accion?.estado',contexto)),'no camina en el lugar al llegar')
+    // El cuenco queda donde pidió aunque el gato se aleje.
+    vm.runInContext(limpio+";x=600;direccion=1;gatito.autonomia={hambre:true}",contexto);avanzar(16)
+    assert.equal(nodos.get('cuenco-pedido').hidden,false,'con hambre el cuenco se ve')
+    const lugar=vm.runInContext('cuencoX',contexto)
+    assert.ok(lugar>600,'el cuenco queda adelante del gato')
+    vm.runInContext("ir(200,'rascar')",contexto);for(let i=0;i<400;i++)avanzar(16)
+    assert.equal(vm.runInContext('cuencoX',contexto),lugar,'el cuenco no camina con el gato')
+    receptores.alRecibirCuidado({accion:'croquetas'});avanzar(16)
+    assert.equal(nodos.get('cuenco-pedido').hidden,true,'al comer el cuenco de afuera desaparece')
+    assert.ok(vm.runInContext("maquina.pendientes().includes('satisfecho')||accion?.estado==='satisfecho'||accion?.estado==='croquetas'",contexto),'después de comer se relame')
+    // El giro hacia el panel es inmediato y se olvida si se cierra.
+    vm.runInContext(limpio+";direccion=1",contexto)
+    receptores.alRecibirCentroVisible({visible:true,lado:'izquierda'})
+    assert.ok(vm.runInContext("maquina.pendientes().includes('girar')",contexto))
+    receptores.alRecibirCentroVisible({visible:false,lado:'izquierda'})
+    assert.equal(vm.runInContext("maquina.pendientes().includes('girar')",contexto),false,'cerrar el panel olvida el giro')
+    // Una sesión que termina no lo despierta.
+    vm.runInContext(limpio+";maquina.pedir('dormir',8)",contexto);avanzar(16)
+    assert.ok(vm.runInContext('maquina.durmiendo()',contexto))
+    const sesion={id:'dormida',name:'Proyecto',status:'working',lastActivityAt:Date.now()}
+    receptores.alRecibirEstado({ahora:Date.now(),sesiones:[sesion],reuniones:[],gatito:{energia:80,saciedad:80,carino:50}})
+    receptores.alRecibirEstado({ahora:Date.now(),sesiones:[{...sesion,status:'waiting'}],reuniones:[],gatito:{energia:80,saciedad:80,carino:50}})
+    avanzar(16)
+    assert.ok(vm.runInContext('maquina.durmiendo()',contexto),'sigue durmiendo')
+    assert.ok(vm.runInContext("[...alertas.keys()].some(id=>id.startsWith('ses:'))",contexto),'el globo aparece igual')
+    assert.ok(!vm.runInContext("maquina.pendientes().some(e=>e==='sesion'||e==='atento')",contexto))
+    // Rechazar un cuidado lo pone en duda.
+    vm.runInContext(limpio,contexto)
+    receptores.alRecibirCuidado({aceptado:false,texto:'Estoy llenito.'})
+    assert.ok(vm.runInContext("maquina.pendientes().includes('duda')",contexto))
+    // Mimar no borra los otros cuidados en cola.
+    vm.runInContext(limpio+";maquina.pedir('croquetas',3);accion={estado:'ocio',reposo:true}",contexto)
+    receptores.alRecibirCuidado({accion:'mimar'})
+    assert.ok(vm.runInContext("maquina.pendientes().includes('croquetas')",contexto),'la comida sigue en cola')
+    vm.runInContext(limpio,contexto)
+  }
+  console.log('Vida: giro antes de caminar, llegada sin caminar en el lugar, cuenco fijo, giro del panel, sesiones sin despertar, duda y mimos sin borrar la cola: OK.')
   vm.runInContext('enviarRegistroGatito()',contexto)
   const registros=enviados.filter(([n])=>n==='registrarGatito')
   assert.ok(registros.length>0)

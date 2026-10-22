@@ -37,28 +37,43 @@
     leche: repetir(4,['leche1','leche2'],450).concat([['leche1',950],['leche2',850]]),
     raton: repetir(8,['raton1','raton2','raton3'],400).concat([['raton1',300]]),
     caja: [['caja1',500],['caja2',550],['caja3',900],['caja4',600],['caja2',450],['caja1',500]],
-    saludo: [['saludar1',700],['saludar2',700],['saludar1',500]], despedida:[['bostezo1',500],['bostezo2',800],['bostezo3',600]], estirar:[['estirar-nuevo',1800]], festejo:[['ronronear2',1800],['cola-nueva',800]],
+    saludo: [['saludar1',700],['saludar2',700],['saludar1',500]], despedida:[['bostezo1',500],['bostezo2',800],['bostezo3',600]], festejo:[['ronronear2',1800],['cola-nueva',800]],
+    estirar:[['estirar-nuevo',900],['estirarse',1100],['estirar-nuevo',700]],
     rascar: repetir(12,['pared1','pared2','pared3','pared4'],250),
-    reunion: [['sentado-quieto',1400],['cola-nueva',600]], sesion: [['sentado-quieto',600],['ronronear1',700],['ronronear2',700]],
+    // Reunión: para las orejas y aparece el signo de alerta. Sesión que espera: atento. Sesión que terminó: salta con el tilde.
+    reunion: [['atento',500],['alerta',1800],['sentado-quieto',300]],
+    atento: [['atento',1400],['sentado-quieto',300]],
+    sesion: [['sentado-quieto',150],['agachar1',140],['listo',800],['aterrizar2',200],['sentado-quieto',300],['ronronear1',600],['ronronear2',600]],
+    duda: [['duda',1600],['sentado-quieto',200]],
     comer: repetir(8,['comer2','comer3','comer4'],320),
-    mimar: repetir(6,['ronronear1','ronronear2'],500), jugar: repetir(9,['ovillo1','ovillo2'],350),
-    pensar: repetir(8,Array.from({length:8},(_,i)=>'pensar'+(i+1)),2500),
+    mimar: repetir(6,['ronronear1','ronronear2'],500).concat([['contento',1200]]),
+    // Termina en ovillo1: la salida a sentado arranca agachado.
+    jugar: repetir(13,['ovillo1','ovillo2','ovillo3','ovillo2'],350),
+    // Después de comer se lava la cara y queda contento.
+    satisfecho: [['sentado-quieto',300],...repetir(6,['lamer1','lamer2','lamer3'],280),['contento',1300],['sentado-quieto',300]],
+    pensar: repetir(8,Array.from({length:8},(_,i)=>'pensar'+(i+1)),2500), tablet: [['tablet',6000]],
     cabecear: repetir(10,['cabecear1','cabecear2','cabecear3','cabecear2','cabecear1'],450),
     empujar: repetir(21,['empujar1','empujar2','empujar3','empujar4','empujar3','empujar2','empujar1'],400),
     panza: repetir(8,['panza1','panza2'],550),
-    hambre: repetir(18,['pedir1','pedir2'],500), dormir: repetir(2,['dormir1'],900),
+    hambre: repetir(18,['pedir1','pedir2'],500),
+    // Respira con el lomo: los bloques de sueño se generan en cada entrada.
+    dormir: [['respirar1',900],['respirar2',900],['respirar3',900],['respirar2',900]],
     // Catálogo para precarga; la máquina genera los bloques en cada entrada.
     panel: [['sentado-quieto',30000],['parpadeo1',120],['parpadeo2',110],['cola-nueva',800]],
     ocio: [['sentado-quieto',30000],['parpadeo1',120],['parpadeo2',110],['cola-nueva',800]],
     'mirar-cursor': [['mirar1',1080],['mirar2',1080]],
+    zarpazo: repetir(5,['pata1','pata2'],210),
     maullar: [['maullar1',180],['maullar2',220]],
+    // Gestos del ánimo dentro del reposo sentado.
+    sueno: [['sueno',2200]], contento: [['contento',1300]], 'maullar-hambre': [['maullar1',200],['maullar2',700],['maullar1',200]],
     lamer: repetir(30,['lamer1','lamer2','lamer3'],280),
     correr: repetir(4,['correr1','correr2','correr3','correr4'],100),
     caminar: repetir(4,['caminar1','caminar2','caminar3','caminar4'],160),
     'ocio-parado': [['parado',4200]],
     'giro-sentado': [['parpadeo1',180],['cola-nueva',420]],
     girar: [['girar1',160],['girar2',180],['girar3',160]],
-    'preparar-salto': [['agachar3',450]],
+    // Mueve la cola agazapado antes de saltar.
+    'preparar-salto': [...repetir(6,['agazapado1','agazapado2'],170),['agachar3',250]],
     soltar: [['sentado-quieto',500]],
   }
   const animaciones = Object.fromEntries(Object.keys(ciclos).map(n=>[n,{inicio:'sentado',fin:'sentado'}]))
@@ -86,19 +101,38 @@
     for(let t=0,i=0;t<total;i++){const d=Math.min(ms,total-t);cuadros.push([nombres[i%nombres.length],d]);t+=d}
     return cuadros
   }
-  function bloqueSentado(total=azar(30000,90000)){
-    const cuadros=[];let t=0,parpadeo=azar(4000,8000),cola=azar(15000,30000)
+  // El ánimo agrega un gesto propio al reposo: cansado cabecea, con hambre maúlla, contento cierra los ojos.
+  function gestoDeAnimo(animo={}){
+    if(animo.hambre)return ciclos['maullar-hambre']
+    if(animo.cansado)return ciclos.sueno
+    if(animo.contento)return ciclos.contento
+    return null
+  }
+  function bloqueSentado(total=azar(30000,90000),animo={}){
+    const cuadros=[],deAnimo=gestoDeAnimo(animo);let t=0,parpadeo=azar(4000,8000),cola=azar(15000,30000),otro=deAnimo?azar(8000,20000):Infinity
     while(t<total){
-      const siguiente=Math.min(parpadeo,cola,total)
+      const siguiente=Math.min(parpadeo,cola,otro,total)
       if(siguiente>t){cuadros.push(['sentado-quieto',siguiente-t]);t=siguiente}
       if(t>=total)break
-      const gesto=parpadeo<=cola?[['parpadeo1',120],['parpadeo2',110],['parpadeo1',120]]:[['cola-nueva',800]]
+      const tipo=otro<=Math.min(parpadeo,cola)?'animo':parpadeo<=cola?'parpadeo':'cola'
+      const gesto=tipo==='animo'?deAnimo:tipo==='parpadeo'?[['parpadeo1',120],['parpadeo2',110],['parpadeo1',120]]:[['cola-nueva',800]]
       // No dejar un gesto cortado en el extremo del bloque.
       if(t+duracion(gesto)>total){cuadros.push(['sentado-quieto',total-t]);break}
       cuadros.push(...gesto);t+=duracion(gesto)
-      if(parpadeo<=cola)parpadeo=t+azar(4000,8000)
+      if(tipo==='animo')otro=t+azar(20000,40000)
+      else if(tipo==='parpadeo')parpadeo=t+azar(4000,8000)
       else cola=t+azar(15000,30000)
       parpadeo=Math.max(parpadeo,t);cola=Math.max(cola,t)
+    }
+    return cuadros
+  }
+  // Mientras Claude trabaja alterna pensar con la tablet.
+  function bloqueTrabajo(total=azar(20000,60000)){
+    const cuadros=[];let t=0,tablet=Math.random()<.5
+    while(t<total){
+      const tramo=Math.min(total-t,tablet?azar(5000,10000):azar(8000,16000))
+      cuadros.push(...(tablet?[['tablet',tramo]]:repetirHasta(Array.from({length:8},(_,i)=>'pensar'+(i+1)),tramo,azar(1800,3500))))
+      t+=tramo;tablet=!tablet
     }
     return cuadros
   }
@@ -118,15 +152,19 @@
       paso(ahora,contexto={}){
         if(proximoAseo===null)proximoAseo=ahora+azar(120000,180000)
         const urgente=cola.some(p=>p.prioridad>=2&&(!p.noAntes||ahora>=p.noAntes))
-        const contextoCambio=actual?.reposo&&(contexto.siesta||ahora-actual.desde>=20000&&
+        // Sólo corta el reposo para dormir si de verdad puede dormirse ahora; si no, rearmaría el reposo en cada cuadro.
+        const quiereDormir=!dormido&&ahora>=vigiliaHasta&&(contexto.energia<22||contexto.siesta)&&!contexto.trabajando&&!contexto.ocupado&&!cola.some(p=>p.prioridad>=3)
+        const contextoCambio=actual?.reposo&&(quiereDormir||ahora-actual.desde>=20000&&
           (contexto.trabajando?actual.estado!=='pensar':contexto.panel?actual.estado!=='panel':['pensar','panel'].includes(actual.estado)))
         const interrumpir=actual?.reposo&&urgente&&ahora>=actual.desde+duracion(actual.tramos.filter(t=>t.tipo==='transicion').flatMap(t=>t.cuadros))
-        if(actual && ahora<actual.hasta && !despertar&&!interrumpir&&!contextoCambio)return actual
+        // Descansado se despierta en el momento, sin esperar el fin del bloque de respiración.
+        const descansado=dormido&&actual?.estado==='dormir'&&ahora-desdeSueno>=SUENO_MINIMO&&contexto.energia>=75&&!contexto.siesta
+        if(actual && ahora<actual.hasta && !despertar&&!interrumpir&&!contextoCambio&&!descansado)return actual
         // Si se interrumpe el dormir, primero completamos acostarse: no saltamos de pose.
         if(despertar && actual && ahora<actual.hasta && actual.tramos.some(t=>t.tipo==='transicion'))return actual
         if(despertar){dormido=false;despertar=false;vigiliaHasta=ahora+5*60000;actual=null}
         if(dormido && ahora-desdeSueno>=SUENO_MINIMO && contexto.energia>=75 && !contexto.siesta){dormido=false;vigiliaHasta=ahora+5*60000}
-        if(!dormido && ahora>=vigiliaHasta && (contexto.energia<22 || contexto.siesta) && !contexto.trabajando && !cola.some(p=>p.prioridad>=3)){dormido=true;desdeSueno=ahora}
+        if(quiereDormir){dormido=true;desdeSueno=ahora}
         cola.sort((a,b)=>b.prioridad-a.prioridad || a.orden-b.orden)
         if(dormido)cola=cola.filter(p=>p.estado!=='dormir')
         const indice=cola.findIndex(p=>!p.noAntes||ahora>=p.noAntes)
@@ -159,19 +197,23 @@
           tramos.push({de:'sentado',a:'sentado',tipo:'animacion',cuadros:(cabecearParado?[]:ciclos.bostezo).concat(...Array.from({length:Math.random()<.5?1:2},()=>ciclos.cabeceo))})
           tramos.push(...camino('sentado','acostado').map(t=>({...t,tipo:'transicion'})))
         }
-        if(pedido.estado==='aburrido')cola.push({estado:Math.random()<.5?'rascar':'jugar',prioridad:1,orden:serial++})
+        // Rascar necesita una pared: el aburrimiento en el lugar juega con el ovillo o el ratón.
+        if(pedido.estado==='aburrido')cola.push({estado:Math.random()<.5?'raton':'jugar',prioridad:1,orden:serial++})
         const reposoFrenado=pedido.motivo==='freno-anti-oscilacion'
         let cuadrosAnimacion=reposoFrenado?reposos[meta.inicio]:ciclos[pedido.variante||pedido.estado]
         if(pedido.reposo){
           if(pedido.variante==='ocio-parado')cuadrosAnimacion=[['parado',azar(30000,90000)]]
-          else if(pedido.estado==='pensar')cuadrosAnimacion=repetirHasta(Array.from({length:8},(_,i)=>'pensar'+(i+1)),azar(20000,60000),azar(1800,3500))
+          else if(pedido.estado==='pensar')cuadrosAnimacion=bloqueTrabajo()
           else if(pedido.estado==='lamer'){
             const aseo=azar(8000,15000),total=azar(30000,90000)
             pedido.aseoMs=aseo
-            cuadrosAnimacion=repetirHasta(['lamer1','lamer2','lamer3'],aseo,280).concat(bloqueSentado(total-aseo))
+            cuadrosAnimacion=repetirHasta(['lamer1','lamer2','lamer3'],aseo,280).concat(bloqueSentado(total-aseo,contexto.animo))
             proximoAseo=ahora+azar(120000,180000)
             pedido.motivo='aseo-y-reposo'
-          }else cuadrosAnimacion=bloqueSentado()
+          }else cuadrosAnimacion=bloqueSentado(undefined,contexto.animo)
+        }else if(pedido.estado==='dormir'&&!reposoFrenado){
+          // Un bloque largo de respiración: no se rearma cada dos segundos.
+          cuadrosAnimacion=repetirHasta(['respirar1','respirar2','respirar3','respirar2'],azar(30000,60000),900)
         }else if(pedido.estado==='lamer'){
           cuadrosAnimacion=repetirHasta(['lamer1','lamer2','lamer3'],azar(8000,15000),280)
           proximoAseo=ahora+azar(120000,180000)
@@ -189,10 +231,11 @@
         pose=meta.fin
         return actual
       },
-      cancelar(id){if(id==='hambre')varianteHambre=null;cola=cola.filter(p=>p.id!==id);if(actual?.id===id){pose=actual.poseFinal;actual=null}despertar=dormido&&cola.some(p=>p.prioridad>=3)},
+      cancelar(id){if(id==null)return;if(id==='hambre')varianteHambre=null;cola=cola.filter(p=>p.id!==id);if(actual?.id===id){pose=actual.poseFinal;actual=null}despertar=dormido&&cola.some(p=>p.prioridad>=3)},
       despertar(){despertar=true},
       reiniciar(nuevaPose){actual=null;if(nuevaPose)pose=nuevaPose},
       vaciar(){cola=[]},
+      descartar(condicion){cola=cola.filter(p=>!condicion(p))},
       pendientes(){return cola.map(p=>p.estado)},
       durmiendo(){return dormido},
     }
